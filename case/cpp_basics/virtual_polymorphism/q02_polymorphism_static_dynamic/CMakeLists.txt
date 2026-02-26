@@ -1,0 +1,3 @@
+add_executable(virtual_polymorphism_q02_polymorphism_static_dynamic
+  main.cpp
+)

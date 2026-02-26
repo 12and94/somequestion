@@ -1,0 +1,10 @@
+^D:\MCWORK\2.26_CODEX\CASE\CPP_BASICS\MEMORY_AND_POINTER\Q3_POINTER_VS_REFERENCE\CMAKELISTS.TXT
+setlocal
+"D:\tools\cmake 3.30\bin\cmake.exe" -SD:/mcwork/2.26_codex/case -BD:/mcwork/2.26_codex/case/build_msvc --check-stamp-file D:/mcwork/2.26_codex/case/build_msvc/cpp_basics/memory_and_pointer/q3_pointer_vs_reference/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

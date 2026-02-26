@@ -1,0 +1,3 @@
+add_executable(virtual_polymorphism_q09_virtual_call_in_ctor_dtor
+  main.cpp
+)

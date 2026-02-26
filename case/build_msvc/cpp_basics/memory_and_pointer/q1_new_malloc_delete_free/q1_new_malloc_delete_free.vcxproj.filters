@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\mcwork\2.26_codex\case\cpp_basics\memory_and_pointer\q1_new_malloc_delete_free\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\mcwork\2.26_codex\case\cpp_basics\memory_and_pointer\q1_new_malloc_delete_free\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{C18590AE-F6AE-3C82-80D8-15A3F0911B15}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,8 @@
+add_subdirectory(q01_object_pool_design)
+add_subdirectory(q02_singleton_pattern)
+add_subdirectory(q03_cpp_versions_features)
+add_subdirectory(q04_access_private_member)
+add_subdirectory(q05_call_member_on_nullptr)
+add_subdirectory(q06_delete_this)
+add_subdirectory(q07_argument_push_order)
+add_subdirectory(q08_func_ptr_size)

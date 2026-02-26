@@ -1,0 +1,3 @@
+add_executable(move_semantics_rvalue_q04_perfect_forwarding_ref_collapse
+  main.cpp
+)

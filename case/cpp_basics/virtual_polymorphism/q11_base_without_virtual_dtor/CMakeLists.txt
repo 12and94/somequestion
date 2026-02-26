@@ -1,0 +1,3 @@
+add_executable(virtual_polymorphism_q11_base_without_virtual_dtor
+  main.cpp
+)

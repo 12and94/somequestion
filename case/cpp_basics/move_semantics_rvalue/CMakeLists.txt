@@ -1,0 +1,8 @@
+add_subdirectory(q01_lvalue_rvalue)
+add_subdirectory(q02_move_vs_copy_ctor)
+add_subdirectory(q03_std_move_principle)
+add_subdirectory(q04_perfect_forwarding_ref_collapse)
+add_subdirectory(q05_when_custom_copy_ctor)
+add_subdirectory(q06_deep_vs_shallow_copy)
+add_subdirectory(q07_move_vs_rvo)
+add_subdirectory(q08_move_assignment)

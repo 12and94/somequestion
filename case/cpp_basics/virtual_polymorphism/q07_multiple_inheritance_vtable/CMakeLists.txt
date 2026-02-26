@@ -1,0 +1,3 @@
+add_executable(virtual_polymorphism_q07_multiple_inheritance_vtable
+  main.cpp
+)

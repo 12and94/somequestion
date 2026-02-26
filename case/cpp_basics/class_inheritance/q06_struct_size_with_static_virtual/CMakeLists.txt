@@ -1,0 +1,3 @@
+add_executable(class_inheritance_q06_struct_size_with_static_virtual
+  main.cpp
+)

@@ -1,0 +1,7 @@
+add_subdirectory(memory_and_pointer)
+add_subdirectory(virtual_polymorphism)
+add_subdirectory(class_inheritance)
+add_subdirectory(move_semantics_rvalue)
+add_subdirectory(stl_containers)
+add_subdirectory(keywords_syntax)
+add_subdirectory(other_cpp_topics)

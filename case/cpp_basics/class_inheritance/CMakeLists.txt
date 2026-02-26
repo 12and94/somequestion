@@ -1,0 +1,8 @@
+add_subdirectory(q01_class_size)
+add_subdirectory(q02_diamond_inheritance)
+add_subdirectory(q03_struct_alignment_layout)
+add_subdirectory(q04_overload_override_hide)
+add_subdirectory(q05_static_member_init)
+add_subdirectory(q06_struct_size_with_static_virtual)
+add_subdirectory(q07_vtable_count_for_instances)
+add_subdirectory(q08_multi_inheritance_problems)
