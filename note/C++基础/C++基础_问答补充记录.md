@@ -873,3 +873,239 @@ struct X {
 
 一句面试版
 `static constexpr` 是类级编译期常量：`static` 表示属于类而非对象，`constexpr` 表示必须是常量表达式；通常用于配置常量、模板参数、`static_assert` 等需要编译期值的场景。
+---
+
+- 日期：2026-02-27
+- 题目：值类别里“有身份、可移动、将亡”分别是什么意思？
+- 补充知识点：
+  - 这三个词分别在描述表达式的不同维度：
+  - “有身份（identity）”：这个表达式对应的是“同一个可辨认对象”，可以持续追踪到同一实体。
+  - “将亡（xvalue）”：对象仍有身份，但被标记为即将结束主要用途，允许转移内部资源。
+  - “可移动”：不是单纯值类别名，而是“该对象在语义上可安全转移资源，且类型提供了可用移动操作”。
+
+  - 1) 有身份（identity）是什么意思：
+  - 有身份 = 能指向同一个对象实体，后续还能继续引用它。
+  - 通常体现为 `glvalue`（`lvalue`/`xvalue` 都有身份）。
+  - 典型例子：变量名 `x`、解引用 `*p`、返回 `T&` 的函数调用。
+  - “有身份”并不等于“不可移动”：`x` 有身份，但你仍可 `std::move(x)` 把它转成将亡值。
+
+  - 2) 将亡（xvalue）是什么意思：
+  - `xvalue` 是“eXpiring value”，可以理解为“有身份但要走了”。
+  - 最常见来源：`std::move(obj)`、返回 `T&&` 的函数。
+  - 将亡值的意义是给重载决议一个强信号：优先匹配 `T&&`，触发移动构造/移动赋值机会。
+  - 注意：将亡不等于对象立即销毁；它只是语义上允许转移资源。
+
+  - 3) 可移动是什么意思：
+  - 可移动是“类型能力 + 当前对象状态”共同决定：
+  - 类型层面：有可访问的移动构造/移动赋值（或编译器可生成）。
+  - 对象层面：当前表达式以右值语义传递（如 `xvalue/prvalue`）时，移动重载才有机会被选中。
+  - 若对象是 `const`，即使 `std::move(const_obj)` 得到 `const T&&`，很多类型也无法真正移动（通常会退回拷贝）。
+
+  - 三者关系（最容易混淆）：
+  - `lvalue`：有身份，默认“还要继续用”。
+  - `xvalue`：有身份，但可当“将亡对象”处理。
+  - `prvalue`：通常无可持续身份，主要表达“值本身”。
+  - `xvalue/prvalue` 都属于 `rvalue`，都可参与移动语义；但“是否真的移动”还要看类型实现与重载匹配。
+
+- 示例代码（把三个概念放在一起看）：
+```cpp
+#include <iostream>
+#include <string>
+#include <utility>
+
+void sink(const std::string&) { std::cout << "copy-like path\n"; }
+void sink(std::string&&)      { std::cout << "move-like path\n"; }
+
+int main() {
+    std::string s = "hello";      // s 是 lvalue（有身份）
+    sink(s);                        // 绑定到 const&
+
+    sink(std::move(s));             // std::move(s) 是 xvalue（将亡）
+                                    // 优先匹配 &&，有机会走移动路径
+
+    sink(std::string("tmp"));      // prvalue（临时值）
+                                    // 也可匹配 &&
+
+    const std::string cs = "const";
+    sink(std::move(cs));            // 常见仍走 const&，因为 const 约束移动
+}
+```
+
+- 通俗解释：
+  - “有身份”像有身份证号的住户（你能一直找到同一个人）。
+  - “将亡”像住户已办退租（还是这个人，但家具可以搬走）。
+  - “可移动”像搬家公司是否可执行：不仅看住户是否退租，还要看房型规则（类型是否支持移动、是否 const 限制）。
+
+- 面试可复述模板：
+  - `有身份指表达式对应可持续追踪的对象实体（glvalue）；将亡值是有身份但可转移资源的 xvalue（典型是 std::move(obj)）；可移动是类型和调用上下文共同决定的能力，不是单个值类别名字。xvalue/prvalue 都可能触发移动，但 const 对象和类型实现会影响最终是否真的移动。`
+
+- 关联章节：
+  - `note/C++基础/C++基础_1.4_移动语义与右值引用.md`
+  - `case/cpp_basics/move_semantics_rvalue/q01_lvalue_rvalue/main.cpp`
+  - `case/cpp_basics/move_semantics_rvalue/q03_std_move_principle/main.cpp`
+
+---
+
+---
+
+- 日期：2026-02-27
+- 题目：`std::move` 是干什么的？
+- 补充知识点：
+  - `std::move` 本质是类型转换工具：把表达式转换为右值语义（更准确是 `xvalue`）。
+  - 它本身不移动资源、不拷贝内存、不做系统调用。
+  - 真正“搬资源”的动作发生在目标类型的移动构造/移动赋值中。
+  - 常见用途：
+    - 把“有名字对象”显式转为右值语义，触发移动重载。
+    - 在移动构造/移动赋值里对成员做转移。
+  - 高频误区：
+    - 误区 1：`std::move` 会立刻移动数据。纠正：它只做 cast。
+    - 误区 2：`std::move(const_obj)` 一定会移动。纠正：常见得到 `const T&&`，许多类型无法从 const 源移动，最后仍可能拷贝。
+    - 误区 3：被 `move` 后对象“不可用”。纠正：对象仍有效，但值未指定，不应依赖原内容。
+- 示例代码：
+```cpp
+#include <string>
+#include <utility>
+
+std::string make();
+
+int main() {
+    std::string s = "hello";
+    std::string t = std::move(s); // 给 t 的构造过程右值语义信号
+
+    std::string u = make();       // 返回 prvalue，通常也可走移动/消除拷贝
+}
+```
+- 面试可复述模板：
+  - ``std::move` 只是把表达式转换为右值语义（xvalue），不负责搬数据；是否真正移动取决于目标类型是否有可用移动操作与重载决议结果。`
+- 关联章节：
+  - `note/C++基础/C++基础_1.4_移动语义与右值引用.md`
+  - `case/cpp_basics/move_semantics_rvalue/q03_std_move_principle/main.cpp`
+
+---
+
+- 日期：2026-02-27
+- 题目：转移资源是什么意思？可用移动操作又是什么？
+- 补充知识点：
+  - “资源”通常指对象管理的外部/昂贵状态：
+    - 堆内存、文件句柄、socket、锁、GPU 句柄、容器缓冲区等。
+  - “转移资源”= 转移所有权，不做深拷贝：
+    - 目标对象接管源对象持有的资源指针/句柄。
+    - 源对象置为“有效但空壳/未指定状态”（如指针置空）。
+  - “可用移动操作”指在当前上下文里，移动构造/移动赋值确实可被调用：
+    - 类型层面有可访问且未删除的移动构造/移动赋值；
+    - 重载决议能选中它（实参具备右值语义）；
+    - `const` 约束不阻断（很多移动需要修改源对象，`const` 会使移动不可用或退回拷贝）。
+  - 常见结果：
+    - `std::move(x)` 只是给机会；
+    - 能不能真的移动，最终看“类型能力 + 实参值类别 + const/访问性/删除状态”。
+- 示例代码：
+```cpp
+#include <cstddef>
+
+struct Buffer {
+    int* data = nullptr;
+    std::size_t n = 0;
+
+    explicit Buffer(std::size_t n_) : data(new int[n_]), n(n_) {}
+
+    Buffer(Buffer&& other) noexcept : data(other.data), n(other.n) {
+        other.data = nullptr;
+        other.n = 0;
+    }
+
+    Buffer(const Buffer&);            // 深拷贝（示意）
+    Buffer& operator=(Buffer&&) noexcept; // 移动赋值（示意）
+    ~Buffer() { delete[] data; }
+};
+```
+- 面试可复述模板：
+  - `转移资源是把所有权从源对象交给目标对象，避免深拷贝；可用移动操作是“类型确实提供且当前上下文可调用”的移动构造/移动赋值。std::move 只提供右值语义机会，不保证一定移动。`
+- 关联章节：
+  - `note/C++基础/C++基础_1.4_移动语义与右值引用.md`
+  - `case/cpp_basics/move_semantics_rvalue/q02_move_vs_copy_ctor/main.cpp`
+
+---
+
+- 日期：2026-02-27
+- 题目：直接将一个 lvalue 赋值给另一个 lvalue（用 `=`）有什么不同？
+- 补充知识点：
+  - 先区分“赋值”和“初始化”：
+    - `T x = y;` 在定义新对象时是初始化（通常走构造）。
+    - `x = y;` 在对象已存在时是赋值（走赋值运算符）。
+  - 当右侧是 lvalue：
+    - `a = b;` 通常匹配拷贝赋值 `operator=(const T&)`。
+    - 语义是保留源对象 `b` 的状态，目标 `a` 获得副本。
+  - 当右侧是右值语义：
+    - `a = std::move(b);` 通常匹配移动赋值 `operator=(T&&)`（若可用）。
+    - 语义是允许把 `b` 的资源转移给 `a`，`b` 进入有效但值未指定状态。
+  - 性能差异主要在资源型对象：
+    - 拷贝赋值可能分配+复制；
+    - 移动赋值通常接管指针/句柄。
+  - 对内建小类型（`int/double`）移动与拷贝成本差异通常不显著。
+  - `const` 场景提醒：
+    - `a = std::move(const_obj)` 常无法走真正移动，可能退回拷贝路径。
+- 对比示例：
+```cpp
+#include <string>
+#include <utility>
+
+int main() {
+    std::string a = "AAAA";
+    std::string b = "BBBB";
+
+    a = b;            // 拷贝赋值：b 保持原语义
+    a = std::move(b); // 移动赋值候选：允许转移 b 的内部资源
+}
+```
+- 面试可复述模板：
+  - `lvalue 给 lvalue 的赋值通常走拷贝赋值，保留源对象；若右侧显式转为右值语义（std::move），才可能走移动赋值并转移资源。要先区分“定义时初始化”和“已有对象赋值”，虽然都可能写等号但语义不同。`
+- 关联章节：
+  - `note/C++基础/C++基础_1.4_移动语义与右值引用.md`
+  - `case/cpp_basics/move_semantics_rvalue/q08_move_assignment/main.cpp`
+
+---
+
+---
+
+- 日期：2026-02-27
+- 题目：为什么拷贝构造如果写成 `T(T)` 会出现“无限递归，语义无法落地”？
+- 补充知识点：
+  - 关键点：按值传参会先构造“形参对象”本体。
+  - 设有 `struct B { B(B); };`，当调用 `B x(y);` 时：
+    1. 目标是调用 `B(B)` 构造 `x`。
+    2. 但调用 `B(B)` 前，必须先构造它的按值形参 `param`（类型也是 `B`）。
+    3. 构造 `param` 又需要调用 `B(B)`。
+    4. 为调用这次 `B(B)`，又要先构造下一层按值形参 `param2`。
+    5. 如此反复，没有“基线”可停，形成无限自递归需求。
+  - 这不是运行时栈递归问题，而是调用语义本身无法完成参数构造链。
+  - 因此拷贝构造的首参数必须是引用类型（如 `T(const T&)`）。
+  - 对比：`T(const T&)` 不需要复制形参对象，只是把实参绑定到引用，避免了自我复制递归。
+
+- 对比示例：
+```cpp
+struct Bad {
+    Bad(Bad); // 不可行：按值形参导致自我复制递归
+};
+
+struct Good {
+    Good(const Good&); // 可行：引用绑定，不复制形参对象
+};
+```
+
+- 调用流程示意（`Bad x(y)`）：
+```text
+要调用 Bad(Bad param)
+  -> 先构造 param（类型 Bad）
+     -> 又要调用 Bad(Bad param2)
+        -> 先构造 param2
+           -> ... 无限展开
+```
+
+- 面试可复述模板：
+  - `拷贝构造不能写成 T(T)，因为按值形参在调用前就要先构造一个 T，而构造这个形参又要调用同一个 T(T)，形成无基线的自我复制递归。正确写法是 T(const T&)，通过引用绑定避免形参复制。`
+
+- 关联章节：
+  - `note/C++基础/C++基础_1.4_移动语义与右值引用.md`
+  - `note/C++基础/C++基础_1.3_类与继承.md`
+
+---
