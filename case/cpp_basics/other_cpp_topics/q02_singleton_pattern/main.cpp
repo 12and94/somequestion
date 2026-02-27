@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：单例模式怎么写？
+// 通俗理解：这题重点是步骤化表达：先做什么、再做什么、为什么这么做。
+
+#include <iostream>
 
 class Logger {
 public:
@@ -16,3 +19,5 @@ private:
 int main() {
     Logger::instance().log(7);
 }
+
+

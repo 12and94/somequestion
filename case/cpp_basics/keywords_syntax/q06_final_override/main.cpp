@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：final和override关键字的作用？
+// 通俗理解：回答时先说它解决的核心痛点，再说副作用或限制。
+
+#include <iostream>
 
 struct Base {
     virtual ~Base() = default;
@@ -13,3 +16,5 @@ int main() {
     Derived d;
     d.run();
 }
+
+

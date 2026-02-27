@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：智能指针有哪些？各自的原理和区别？
+// 通俗理解：先抓“它们各自解决什么问题”，再对比使用场景和代价。
+
+#include <iostream>
 #include <memory>
 
 int main() {
@@ -12,3 +15,5 @@ int main() {
     sp2.reset();
     std::cout << std::boolalpha << wp.expired() << "\n";
 }
+
+

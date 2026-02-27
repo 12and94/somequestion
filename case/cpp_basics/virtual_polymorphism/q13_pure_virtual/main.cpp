@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：纯虚函数是什么？
+// 通俗理解：先下定义，再给一个实际场景，面试会更有说服力。
+
+#include <iostream>
 
 struct IShape {
     virtual ~IShape() = default;
@@ -15,3 +18,5 @@ int main() {
     Square s(3.0);
     std::cout << s.area() << "\n";
 }
+
+

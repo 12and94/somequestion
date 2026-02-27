@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：内存泄漏是什么？如何检测和解决？
+// 通俗理解：这题重点是步骤化表达：先做什么、再做什么、为什么这么做。
+
+#include <iostream>
 #include <memory>
 
 int main() {
@@ -7,3 +10,5 @@ int main() {
     auto p = std::make_unique<int>(1);
     std::cout << *p << "\n";
 }
+
+

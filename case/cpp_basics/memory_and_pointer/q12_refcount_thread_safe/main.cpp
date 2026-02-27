@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：引用计数如何保证线程安全？
+// 通俗理解：这题重点是步骤化表达：先做什么、再做什么、为什么这么做。
+
+#include <iostream>
 #include <memory>
 #include <thread>
 
@@ -9,3 +12,5 @@ int main() {
     t1.join();
     t2.join();
 }
+
+

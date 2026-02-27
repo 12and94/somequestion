@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：weak_ptr的作用和实现原理？
+// 通俗理解：按“数据从哪里来、经过什么步骤、最后得到什么结果”来理解最稳。
+
+#include <iostream>
 #include <memory>
 
 int main() {
@@ -10,3 +13,5 @@ int main() {
     }
     std::cout << std::boolalpha << wp.expired() << "\n";
 }
+
+

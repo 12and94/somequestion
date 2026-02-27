@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：四种类型转换(static_cast等)的区别和使用场景？
+// 通俗理解：先抓“它们各自解决什么问题”，再对比使用场景和代价。
+
+#include <iostream>
 
 struct Base { virtual ~Base() = default; };
 struct Derived : Base { void hello() { std::cout << "hi\n"; } };
@@ -11,3 +14,5 @@ int main() {
     delete b;
     std::cout << i << "\n";
 }
+
+

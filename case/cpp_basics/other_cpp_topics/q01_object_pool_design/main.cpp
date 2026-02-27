@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：对象池的实现思路？
+// 通俗理解：先记最小实现流程，再补常见优化点和坑点。
+
+#include <iostream>
 #include <vector>
 
 struct Bullet {
@@ -15,3 +18,5 @@ int main() {
     pool[idx].id = 100;
     std::cout << pool[idx].id << "\n";
 }
+
+

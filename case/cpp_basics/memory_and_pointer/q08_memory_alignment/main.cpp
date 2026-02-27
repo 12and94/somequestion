@@ -1,4 +1,7 @@
-﻿#include <cstddef>
+﻿// 题目：内存对齐是什么？为什么要内存对齐？
+// 通俗理解：先下定义，再给一个实际场景，面试会更有说服力。
+
+#include <cstddef>
 #include <iostream>
 
 struct S {
@@ -9,3 +12,5 @@ struct S {
 int main() {
     std::cout << sizeof(S) << " " << offsetof(S, i) << "\n";
 }
+
+

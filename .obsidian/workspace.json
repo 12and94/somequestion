@@ -1,0 +1,200 @@
+{
+  "main": {
+    "id": "a63c7d559e17a3fd",
+    "type": "split",
+    "children": [
+      {
+        "id": "0e40ad16ee28ee96",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6694cdaf3e282c14",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "note/C++基础/C++基础_1.4_移动语义与右值引用.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "C++基础_1.4_移动语义与右值引用"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "d4ffa43aca58eb5e",
+    "type": "split",
+    "children": [
+      {
+        "id": "cac3d125984e4cab",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d9c3b821ba307ef8",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "e0231cee1dff62c9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "89cfa1753cccc883",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 203.5
+  },
+  "right": {
+    "id": "ed48e6a02fbee8cb",
+    "type": "split",
+    "children": [
+      {
+        "id": "0e3586fbbd503847",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f5818123064c945e",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "note/C++基础/C++基础_1.1_内存管理与指针.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for C++基础_1.1_内存管理与指针"
+            }
+          },
+          {
+            "id": "d4db6e617125c2f2",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "note/C++基础/C++基础_1.1_内存管理与指针.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from C++基础_1.1_内存管理与指针"
+            }
+          },
+          {
+            "id": "a9445e408979d345",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "19b6261223ba23a9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "c4b4b730c050245f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "note/C++基础/C++基础_1.1_内存管理与指针.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of C++基础_1.1_内存管理与指针"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "6694cdaf3e282c14",
+  "lastOpenFiles": [
+    "sync.bat",
+    "sync.ps1",
+    "note/C++基础/C++基础_1.3_类与继承.md",
+    "面经题目分类汇总.md",
+    "note/C++基础/C++基础_问答补充记录.md",
+    "note/C++基础/C++基础_1.4_移动语义与右值引用.md",
+    "note/C++基础/C++基础_1.2_虚函数与多态.md",
+    "note/C++基础/C++基础_生成记录.md",
+    "note/C++基础/C++基础_1.1_内存管理与指针.md",
+    "note/C++基础/C++基础_内存管理与指针_前三题.md",
+    "note/图形学基础/图形学基础_问答补充记录.md"
+  ]
+}

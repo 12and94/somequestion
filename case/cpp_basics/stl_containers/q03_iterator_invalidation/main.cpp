@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：迭代器失效的情况有哪些？
+// 通俗理解：先分类列举，再挑最常用的两三种展开优缺点。
+
+#include <iostream>
 #include <vector>
 
 int main() {
@@ -9,3 +12,5 @@ int main() {
     }
     std::cout << v.size() << "\n";
 }
+
+

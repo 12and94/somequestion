@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：虚函数的实现原理？虚函数表是什么？
+// 通俗理解：按“数据从哪里来、经过什么步骤、最后得到什么结果”来理解最稳。
+
+#include <iostream>
 
 struct Base {
     virtual ~Base() = default;
@@ -15,3 +18,5 @@ int main() {
     p->draw();
     delete p;
 }
+
+

@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：哪些STL底层是哈希表？
+// 通俗理解：先用一句话说明核心结论，再结合这段代码看最小示例。
+
+#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -7,3 +10,5 @@ int main() {
     std::unordered_map<int, int> m{{1, 10}};
     std::cout << s.count(2) << " " << m[1] << "\n";
 }
+
+

@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：list和vector的区别？
+// 通俗理解：先抓“它们各自解决什么问题”，再对比使用场景和代价。
+
+#include <iostream>
 #include <list>
 #include <vector>
 
@@ -11,3 +14,5 @@ int main() {
     l.insert(it, 99);
     std::cout << v[1] << " " << l.size() << "\n";
 }
+
+

@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：移动赋值运算符怎么写？
+// 通俗理解：这题重点是步骤化表达：先做什么、再做什么、为什么这么做。
+
+#include <iostream>
 #include <utility>
 
 class Buffer {
@@ -22,3 +25,5 @@ int main() {
     b = std::move(a);
     std::cout << "move assign done\n";
 }
+
+

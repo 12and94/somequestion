@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：析构函数为什么要是虚函数？
+// 通俗理解：先用一句话说明核心结论，再结合这段代码看最小示例。
+
+#include <iostream>
 
 struct Base {
     virtual ~Base() { std::cout << "~Base\n"; }
@@ -13,3 +16,5 @@ int main() {
     Base* p = new Derived();
     delete p;
 }
+
+

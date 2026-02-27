@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：vector的底层实现？扩容机制？
+// 通俗理解：先记最小实现流程，再补常见优化点和坑点。
+
+#include <iostream>
 #include <vector>
 
 int main() {
@@ -12,3 +15,5 @@ int main() {
         }
     }
 }
+
+

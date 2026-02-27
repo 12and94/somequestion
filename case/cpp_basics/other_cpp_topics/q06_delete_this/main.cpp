@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：delete this的使用场景？
+// 通俗理解：先用一句话说明核心结论，再结合这段代码看最小示例。
+
+#include <iostream>
 
 class SelfDelete {
 public:
@@ -13,3 +16,5 @@ int main() {
     SelfDelete* p = SelfDelete::create();
     p->destroy();
 }
+
+

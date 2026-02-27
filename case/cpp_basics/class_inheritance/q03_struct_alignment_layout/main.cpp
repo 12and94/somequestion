@@ -1,4 +1,7 @@
-﻿#include <cstddef>
+﻿// 题目：结构体内存对齐规则？int, char, short的内存布局？
+// 通俗理解：先用一句话说明核心结论，再结合这段代码看最小示例。
+
+#include <cstddef>
 #include <iostream>
 
 struct S {
@@ -14,3 +17,5 @@ int main() {
               << offsetof(S, i) << "/"
               << offsetof(S, s) << "\n";
 }
+
+

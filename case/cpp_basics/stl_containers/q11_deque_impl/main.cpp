@@ -1,4 +1,7 @@
-﻿#include <deque>
+﻿// 题目：deque的底层实现？
+// 通俗理解：先记最小实现流程，再补常见优化点和坑点。
+
+#include <deque>
 #include <iostream>
 
 int main() {
@@ -8,3 +11,5 @@ int main() {
     d.push_front(0);
     std::cout << d.front() << " " << d.back() << "\n";
 }
+
+

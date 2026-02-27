@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：哈希表的实现？哈希冲突如何解决？
+// 通俗理解：先记最小实现流程，再补常见优化点和坑点。
+
+#include <iostream>
 #include <unordered_map>
 
 struct BadHash {
@@ -10,3 +13,5 @@ int main() {
     for (int i = 0; i < 5; ++i) m[i] = i * 10;
     std::cout << m.size() << "\n";
 }
+
+

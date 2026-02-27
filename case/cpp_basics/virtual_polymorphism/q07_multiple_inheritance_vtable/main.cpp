@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：多重继承的虚函数表怎么存？有几张表？
+// 通俗理解：这题重点是步骤化表达：先做什么、再做什么、为什么这么做。
+
+#include <iostream>
 
 struct B1 { virtual ~B1() = default; virtual void f() { std::cout << "B1::f\n"; } };
 struct B2 { virtual ~B2() = default; virtual void g() { std::cout << "B2::g\n"; } };
@@ -15,3 +18,5 @@ int main() {
     p1->f();
     p2->g();
 }
+
+

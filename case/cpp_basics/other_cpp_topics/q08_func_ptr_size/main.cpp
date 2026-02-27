@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：函数指针和成员函数指针的大小？
+// 通俗理解：先用一句话说明核心结论，再结合这段代码看最小示例。
+
+#include <iostream>
 
 struct A { void f() {} };
 
@@ -10,3 +13,5 @@ int main() {
     std::cout << sizeof(FP) << " " << sizeof(MFP) << "\n";
     (void)free_fn;
 }
+
+

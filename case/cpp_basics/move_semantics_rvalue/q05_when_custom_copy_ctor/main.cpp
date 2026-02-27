@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：什么时候需要自己写拷贝构造函数？
+// 通俗理解：关键是时机：在生命周期哪一阶段发生、由谁触发。
+
+#include <iostream>
 
 class DeepCopy {
 public:
@@ -14,3 +17,5 @@ int main() {
     DeepCopy b = a;
     std::cout << "deep copy done\n";
 }
+
+

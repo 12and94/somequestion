@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：RAII是什么？
+// 通俗理解：先下定义，再给一个实际场景，面试会更有说服力。
+
+#include <iostream>
 #include <memory>
 
 int main() {
@@ -6,3 +9,5 @@ int main() {
     auto p = std::make_unique<int>(7);
     std::cout << *p << "\n";
 }
+
+

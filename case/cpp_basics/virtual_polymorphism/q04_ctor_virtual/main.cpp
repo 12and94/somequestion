@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：构造函数能否是虚函数？为什么？
+// 通俗理解：这题通常先给结论，再解释语言规则或机制原因。
+
+#include <iostream>
 
 struct Resource {
     explicit Resource(int id) : id(id) {}
@@ -12,3 +15,5 @@ int main() {
     Resource r = make_resource(7);
     std::cout << r.id << "\n";
 }
+
+

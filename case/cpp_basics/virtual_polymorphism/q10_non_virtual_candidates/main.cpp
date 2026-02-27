@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：哪些函数不能是虚函数？
+// 通俗理解：先用一句话说明核心结论，再结合这段代码看最小示例。
+
+#include <iostream>
 
 struct X {
     X() = default;                 // 构造函数不能 virtual
@@ -14,3 +17,5 @@ int main() {
     X::s();
     free_func();
 }
+
+

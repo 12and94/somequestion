@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// 题目：shared_ptr的底层实现？循环引用如何解决？
+// 通俗理解：先记最小实现流程，再补常见优化点和坑点。
+
+#include <iostream>
 #include <memory>
 
 struct Node;
@@ -15,3 +18,5 @@ int main() {
     b->next = a;
     std::cout << a.use_count() << " " << b.use_count() << "\n";
 }
+
+
