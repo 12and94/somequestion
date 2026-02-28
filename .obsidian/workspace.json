@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "note/C++基础/C++基础_1.4_移动语义与右值引用.md",
-                "mode": "source",
+                "file": "note/C++基础/C++基础_1.6_关键字与语法.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "C++基础_1.4_移动语义与右值引用"
+              "title": "C++基础_1.6_关键字与语法"
             }
           }
         ]
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 294.5
+    "width": 200
   },
   "right": {
     "id": "ed48e6a02fbee8cb",
@@ -185,15 +185,15 @@
   },
   "active": "6694cdaf3e282c14",
   "lastOpenFiles": [
-    "note/C++基础/C++基础_1.1_内存管理与指针.md",
+    "note/C++基础/C++基础_1.7_其他C++问题.md",
+    "note/C++基础/C++基础_1.6_关键字与语法.md",
+    "note/C++基础/C++基础_1.5_STL容器.md",
+    "note/C++基础/C++基础_内存管理与指针_前三题.md",
     "note/C++基础/C++基础_1.4_移动语义与右值引用.md",
+    "note/C++基础/C++基础_1.1_内存管理与指针.md",
     "note/C++基础/C++基础_问答补充记录.md",
     "note/图形学基础/图形学基础_2.1_渲染管线.md",
     "note/图形学基础/图形学基础_2.2_深度测试与Early-Z.md",
-    "note/C++基础/C++基础_1.7_其他C++问题.md",
-    "note/C++基础/C++基础_内存管理与指针_前三题.md",
-    "note/C++基础/C++基础_1.5_STL容器.md",
-    "note/C++基础/C++基础_1.6_关键字与语法.md",
     "sync.bat",
     "sync.ps1",
     "note/C++基础/C++基础_1.3_类与继承.md",
