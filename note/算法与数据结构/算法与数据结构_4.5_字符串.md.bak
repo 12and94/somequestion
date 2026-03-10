@@ -1,0 +1,188 @@
+﻿# 算法与数据结构：4.5 字符串
+
+本文覆盖 `面经题目分类汇总.md` 中算法与数据结构的 `4.5 字符串` 全部题目。  
+每个题目统一包含：标准准确的说法、通俗易懂的理解、面试回答简版模板、对应示例。
+
+---
+
+## 题目：括号匹配
+
+### 标准准确的说法
+- 用栈维护“尚未匹配的左括号”。
+- 遍历字符串：
+- 遇左括号入栈。
+- 遇右括号检查栈顶是否匹配，不匹配或空栈则失败。
+- 扫描结束后栈为空才匹配成功。
+- 复杂度：`O(N)` 时间，`O(N)` 空间。
+
+### 通俗易懂的理解
+- 括号匹配像“开门关门登记”，后开的门必须先关。
+
+### 面试回答简版模板
+`括号匹配是栈的标准应用，左括号入栈，右括号与栈顶配对，最终栈空即合法。`
+
+### 对应示例
+```cpp
+bool isValidBracket(const std::string& s) {
+    std::stack<char> st;
+    std::unordered_map<char, char> mp{{')','('}, {']','['}, {'}','{'}};
+    for (char c : s) {
+        if (c == '(' || c == '[' || c == '{') st.push(c);
+        else {
+            if (st.empty() || st.top() != mp[c]) return false;
+            st.pop();
+        }
+    }
+    return st.empty();
+}
+```
+
+---
+
+## 题目：字符串压缩
+
+### 标准准确的说法
+- 常见题型：把连续重复字符压缩成 `字符+次数`，如 `aaabb` -> `a3b2`。
+- 双指针扫描连续段：
+- `i` 指段起点，`j` 向后扩展到段结束。
+- 写入字符与计数。
+- 复杂度：`O(N)` 时间。
+
+### 通俗易懂的理解
+- 把“连续相同字母”打包记账，不同字母就换一包。
+
+### 面试回答简版模板
+`字符串压缩核心是按段统计连续字符，双指针线性扫描即可，时间 O(N)。`
+
+### 对应示例
+```cpp
+std::string compress(const std::string& s) {
+    std::string out;
+    int n = (int)s.size();
+    for (int i = 0; i < n; ) {
+        int j = i;
+        while (j < n && s[j] == s[i]) ++j;
+        out.push_back(s[i]);
+        out += std::to_string(j - i);
+        i = j;
+    }
+    return out;
+}
+```
+
+---
+
+## 题目：KMP算法
+
+### 标准准确的说法
+- KMP 用 `next/lps`（最长相等前后缀）数组避免主串指针回退。
+- 预处理模式串 `p` 得到 `lps`：`lps[i]` 表示 `p[0..i]` 的最长相等前后缀长度。
+- 匹配时失配：模式串按 `lps` 跳转，主串继续前进。
+- 复杂度：预处理 `O(M)`，匹配 `O(N)`，总 `O(N+M)`。
+
+### 通俗易懂的理解
+- KMP 像“失配后不从头来”，利用模式串自身重复结构，直接跳到“最有希望继续匹配”的位置。
+
+### 面试回答简版模板
+`KMP 通过 lps 数组记录模式串自相似结构，失配时模式串跳转而主串不回退，匹配复杂度 O(N+M)。`
+
+### 对应示例
+```cpp
+std::vector<int> buildLPS(const std::string& p) {
+    int m = (int)p.size();
+    std::vector<int> lps(m, 0);
+    for (int i = 1, len = 0; i < m; ) {
+        if (p[i] == p[len]) lps[i++] = ++len;
+        else if (len) len = lps[len - 1];
+        else lps[i++] = 0;
+    }
+    return lps;
+}
+
+int kmpFind(const std::string& s, const std::string& p) {
+    if (p.empty()) return 0;
+    auto lps = buildLPS(p);
+    for (int i = 0, j = 0; i < (int)s.size(); ) {
+        if (s[i] == p[j]) { ++i; ++j; }
+        if (j == (int)p.size()) return i - j;
+        else if (i < (int)s.size() && s[i] != p[j]) {
+            if (j) j = lps[j - 1];
+            else ++i;
+        }
+    }
+    return -1;
+}
+```
+
+---
+
+## 题目：AC自动机
+
+### 标准准确的说法
+- AC 自动机用于“多模式串匹配”。
+- 结构：Trie + fail 指针（类似 KMP 失配跳转思想）。
+- 流程：
+1. 把所有模式串插入 Trie。
+2. BFS 构建 fail 指针。
+3. 扫描文本，沿 Trie/fail 跳转并统计命中。
+- 复杂度：
+- 构建约 `O(模式串总长度 * 字符集常数)`。
+- 查询约 `O(文本长度 + 命中次数)`。
+
+### 通俗易懂的理解
+- AC 像“词库雷达”：一次扫描文本，同时检测很多关键词，失配时用 fail 快速回退，不从头重扫。
+
+### 面试回答简版模板
+`AC 自动机是 Trie + fail 指针，用于多模式串匹配。构建后可线性扫描文本并同时命中多个关键词。`
+
+### 对应示例
+```cpp
+struct ACNode {
+    int next[26];
+    int fail;
+    int out; // 命中计数（可扩展为模式ID列表）
+    ACNode() : fail(0), out(0) { std::fill(next, next + 26, -1); }
+};
+
+class ACAutomaton {
+public:
+    std::vector<ACNode> t{ACNode()};
+
+    void insert(const std::string& p) {
+        int u = 0;
+        for (char c : p) {
+            int x = c - 'a';
+            if (t[u].next[x] == -1) {
+                t[u].next[x] = (int)t.size();
+                t.push_back(ACNode());
+            }
+            u = t[u].next[x];
+        }
+        t[u].out++;
+    }
+
+    void build() {
+        std::queue<int> q;
+        for (int c = 0; c < 26; ++c) {
+            int v = t[0].next[c];
+            if (v != -1) q.push(v);
+            else t[0].next[c] = 0;
+        }
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            t[u].out += t[t[u].fail].out;
+            for (int c = 0; c < 26; ++c) {
+                int v = t[u].next[c];
+                if (v != -1) {
+                    t[v].fail = t[t[u].fail].next[c];
+                    q.push(v);
+                } else {
+                    t[u].next[c] = t[t[u].fail].next[c];
+                }
+            }
+        }
+    }
+};
+```
+
+---

@@ -1,0 +1,7 @@
+.callout[data-callout="mb"] {
+    background-color: #fff3cd;   /* 背景色 */
+    border-left: 4px solid #d69e2e; /* 左边线颜色 */
+    color: #ffffff;              /* 文字颜色 */
+    padding: 10px;               /* 内边距 */
+    border-radius: 5px;          /* 圆角 */
+}
