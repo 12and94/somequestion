@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "note/图形学基础/图形学基础_2.4_光照模型与PBR.md",
+                "file": "note/现代渲染器算法的Vulkan实现指南.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "图形学基础_2.4_光照模型与PBR"
+              "title": "现代渲染器算法的Vulkan实现指南"
             }
           }
         ]
@@ -78,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200,
-    "collapsed": true
+    "width": 399.5
   },
   "right": {
     "id": "ed48e6a02fbee8cb",
@@ -186,41 +185,41 @@
   },
   "active": "e2d5f044611c8501",
   "lastOpenFiles": [
-    "note/图形学基础/图形学基础_2.3_空间变换与坐标系.md",
-    "note/图形学基础/图形学基础_2.2_深度测试与Early-Z.md",
-    "note/物理引擎/物理引擎_问答补充记录.md",
-    "note/C++基础/C++基础_问答补充记录.md",
-    "note/物理引擎/物理引擎_面试准备清单.md",
-    "note/物理引擎/物理引擎_高频问答.md",
-    "note/物理引擎/物理引擎_4_工程化与性能.md",
-    "note/物理引擎/物理引擎_7_项目实战与面试策略.md",
-    "note/物理引擎/物理引擎_6_动画联动与特殊模拟.md",
-    "note/物理引擎/物理引擎_5_网络同步与确定性.md",
-    "note/物理引擎/物理引擎_3_碰撞响应与约束求解.md",
-    "note/物理引擎/物理引擎_2_碰撞检测.md",
-    "note/物理引擎/物理引擎_1_数学与刚体基础.md",
-    "note/物理引擎/README.md",
-    "note/物理引擎",
+    "note/现代渲染器核心算法清单.md",
+    "note/现代渲染器算法的Vulkan实现指南.md",
+    "note/从零实现现代Vulkan渲染器_完整知识体系.md",
+    "note/topology_variable_subspace_project_mastery_checklist.md",
+    "note/Vulkan/Vulkan_3.6_Descriptor_PipelineLayout_Pipeline_面试详解.md",
+    "note/Vulkan/Vulkan_3.5_Memory_面试详解.md",
+    "note/Vulkan/Vulkan_3.4_Buffer_Image_ImageView_Sampler_面试详解.md",
+    "note/Vulkan/Vulkan_3.3_Surface_Swapchain_面试详解.md",
     "note/图形学基础/图形学基础_2.1_渲染管线.md",
-    "note/C++基础/C++基础_1.2_虚函数与多态.md",
-    "note/C++基础/C++基础_1.1_内存管理与指针.md",
-    "note/C++基础/C++基础_1.6_关键字与语法.md",
+    "note/简历/简历优化建议_2026-03-16.md",
+    "note/简历",
+    "note/Vulkan/Vulkan_3.9_Fence_Semaphore_Barrier_面试详解.md",
+    "note/Vulkan/Vulkan_3.7_RenderPass_DynamicRendering_面试详解.md",
+    "note/Vulkan/Vulkan_3.2_PhysicalDevice_Device_Queue_面试详解.md",
+    "note/图形学基础/图形学基础_2.7_全局光照.md",
+    "note/Vulkan/Vulkan_3.1_Instance_Layer_Extension_面试详解.md",
+    "note/Vulkan/Vulkan_整体框架与核心概念详解.md",
+    "note/Vulkan/Vulkan_从零到项目_完整学习路线.md",
+    "note/Vulkan/Vulkan_3.8_CommandPool_CommandBuffer_面试详解.md",
+    "note/Vulkan/Vulkan_3.4_CommandPool_CommandBuffer_面试详解.md",
+    "note/物理引擎/物理引擎_1_数学与刚体基础.md",
+    "note/Vulkan",
+    "note/图形学基础/图形学基础_问答补充记录.md",
+    "note/图形学基础/图形学基础_2.13_其他图形学.md",
+    "note/图形学基础/图形学基础_2.12_数学基础.md",
+    "note/图形学基础/图形学基础_2.11_动画与蒙皮.md",
     "note/图形学基础/图形学基础_2.10_Vulkan_OpenGL_DX.md",
-    "note/C++基础/C++基础_1.4_移动语义与右值引用.md",
-    "note/算法与数据结构/算法与数据结构_4.1_链表.md",
-    "note/计算机基础/计算机基础_3.1_内存与进程.md",
-    "note/计算机基础/计算机基础_3.5_其他系统知识.md",
-    "note/C++基础/C++基础_1.5_STL容器.md",
-    "note/C++基础/C++基础_1.3_类与继承.md",
-    "note/C++基础/C++基础_1.7_其他C++问题.md",
+    "note/C++基础/C++基础_1.1_内存管理与指针.md",
+    "note/物理引擎",
     "note/计算机基础/计算机基础_3.5_其他系统知识.md.bak",
     "note/计算机基础/计算机基础_3.4_编译与链接.md.bak",
     "note/计算机基础/计算机基础_3.3_网络.md.bak",
     "note/计算机基础/计算机基础_3.2_多线程与同步.md.bak",
     "note/计算机基础/计算机基础_3.1_内存与进程.md.bak",
     "note/算法与数据结构/算法与数据结构_4.7_设计题.md.bak",
-    "note/算法与数据结构/算法与数据结构_4.6_其他算法.md.bak",
-    "note/算法与数据结构/算法与数据结构_4.5_字符串.md.bak",
-    "note/算法与数据结构/算法与数据结构_4.4_排序与查找.md.bak"
+    "note/算法与数据结构/算法与数据结构_4.6_其他算法.md.bak"
   ]
 }
