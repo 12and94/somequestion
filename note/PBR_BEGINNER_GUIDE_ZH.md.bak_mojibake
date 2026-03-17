@@ -1,0 +1,438 @@
+﻿# Vulkan 鍒?PBR 娓叉煋瀹屾暣娴佺▼鎷嗚В锛堜唬鐮佸畾浣嶅寮虹増锛?
+> 鐩爣锛氳浣犱粠 `Instance` 鍒?`PBR 鍑哄浘` 鍐嶅埌 `閿€姣乣锛屾瘡涓€姝ラ兘鑳藉湪婧愮爜閲?*绮剧‘鎵惧埌瀵瑰簲浠ｇ爜**銆? 
+> 涓荤嚎鏍蜂緥锛歚examples/pbrtexture/pbrtexture.cpp`
+
+---
+
+## 0. 濡備綍浣跨敤杩欎唤鏂囨。
+
+1. 鎵撳紑 IDE 鐨勨€滆浆鍒拌鈥濓紙Go to Line锛夈€?2. 鎸夋湰鏂?`姝ラ缂栧彿` 鏌ュ搴?`鏂囦欢:琛屽彿`銆?3. 姣忎竴姝ュ彧鍥炵瓟 3 涓棶棰橈細
+   - 杈撳叆璧勬簮鏄粈涔堬紵
+   - 杩欎竴姝ュ垱寤?鏇存柊浜嗕粈涔?Vulkan 瀵硅薄锛?   - 杈撳嚭缁欎笅涓€姝ョ殑鏄粈涔堬紵
+
+---
+
+## 1. 涓€寮犳€绘祦绋嬪浘锛堝厛鐪嬪叏灞€锛?
+```text
+鍏ュ彛瀹?VULKAN_EXAMPLE_MAIN
+  -> new VulkanExample
+  -> initVulkan
+       -> createInstance
+       -> 鏋氫妇鐗╃悊璁惧
+       -> createLogicalDevice
+       -> 鑾峰彇 graphics queue
+  -> setupWindow
+  -> prepare
+       -> VulkanExampleBase::prepare
+            surface / swapchain / sync / depth / renderpass / framebuffer
+       -> pbrtexture::prepare
+            loadAssets
+            generateBRDFLUT
+            generateIrradianceCube
+            generatePrefilteredCube
+            prepareUniformBuffers
+            setupDescriptors
+            preparePipelines
+  -> renderLoop
+       -> render (姣忓抚)
+            prepareFrame
+            updateUniformBuffers
+            buildCommandBuffer
+            submitFrame
+  -> 鏋愭瀯
+       -> pbrtexture 鏋愭瀯
+       -> VulkanExampleBase 鏋愭瀯
+```
+
+---
+
+## 2. 鍏ㄦ祦绋嬩唬鐮佸畾浣嶈〃锛堟牳蹇冿級
+
+> **颜色图例**（同一阶段同一颜色）
+> - <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S01-S07 启动主流程</span>
+> - <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S08-S15 实例创建</span>
+> - <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S16-S22 设备初始化</span>
+> - <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S23-S41 Base Prepare 与 Swapchain</span>
+> - <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S42-S67 PBR 资源准备</span>
+> - <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S68-S80 每帧渲染提交</span>
+> - <span style="background-color:#FFF3E0;padding:1px 6px;border-radius:4px;">S81-S84 Resize 重建</span>
+> - <span style="background-color:#F1F8E9;padding:1px 6px;border-radius:4px;">S85-S86 UI 调参</span>
+> - <span style="background-color:#FCE4EC;padding:1px 6px;border-radius:4px;">S87-S90 资源销毁</span>
+>
+| 姝ラ | 浣滅敤 | 浠ｇ爜瀹氫綅锛堟枃浠?琛岋級 | 浣犺閲嶇偣鐪嬩粈涔?|
+|---|---|---|---|
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S01</span> | 骞冲彴鍏ュ彛锛圵in32锛?| `base/Entrypoints.h:25` | `WinMain` 鐨勫惎鍔ㄩ『搴?|
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S02</span> | 鍒涘缓鏍蜂緥瀵硅薄 | `base/Entrypoints.h:28` | `new VulkanExample()` |
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S03</span> | 鍒濆鍖?Vulkan | `base/Entrypoints.h:29` | 杩涘叆 `initVulkan()` |
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S04</span> | 鍒涘缓绐楀彛 | `base/Entrypoints.h:30` | `setupWindow(...)` |
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S05</span> | 鍒濆鍖栨覆鏌撹祫婧?| `base/Entrypoints.h:31` | `prepare()` |
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S06</span> | 杩涘叆涓诲惊鐜?| `base/Entrypoints.h:32` | `renderLoop()` |
+| <span style="background-color:#E8F4FD;padding:1px 6px;border-radius:4px;">S07</span> | 閫€鍑洪噴鏀?| `base/Entrypoints.h:33` | `delete(vulkanExample)` |
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S08</span> | 鍛戒护琛屽弬鏁版敞鍐?| `base/vulkanexamplebase.cpp:766-783` | `-s/-v/-g/-gl/-rp` 绛?|
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S09</span> | 鍛戒护琛屽弬鏁拌В鏋?| `base/vulkanexamplebase.cpp:785` | `commandLineParser.parse(args)` |
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S10</span> | createInstance 寮€濮?| `base/vulkanexamplebase.cpp:26` | 瀹炰緥鎵╁睍涓?layer 缁勮 |
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S11</span> | 骞冲彴 surface 鎵╁睍杩藉姞 | `base/vulkanexamplebase.cpp:28-52` | Win32/Android/XCB/Wayland 绛?|
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S12</span> | 鏌ヨ瀹炰緥鎵╁睍 | `base/vulkanexamplebase.cpp:57,61` | `vkEnumerateInstanceExtensionProperties` |
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S13</span> | debug utils 鎵╁睍 | `base/vulkanexamplebase.cpp:131-132` | `VK_EXT_DEBUG_UTILS_EXTENSION_NAME` |
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S14</span> | validation layer 鍚嶇О | `base/vulkanexamplebase.cpp:142` | `VK_LAYER_KHRONOS_validation` |
+| <span style="background-color:#E8F5E9;padding:1px 6px;border-radius:4px;">S15</span> | 鐪熸鍒涘缓瀹炰緥 | `base/vulkanexamplebase.cpp:175` | `vkCreateInstance` |
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S16</span> | initVulkan 涓诲嚱鏁?| `base/vulkanexamplebase.cpp:997` | 璁惧鍒濆鍖栨€诲叆鍙?|
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S17</span> | 鏋氫妇鐗╃悊璁惧 | `base/vulkanexamplebase.cpp:1029,1036` | `vkEnumeratePhysicalDevices` |
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S18</span> | 璇诲彇璁惧鑳藉姏 | `base/vulkanexamplebase.cpp:1073-1075` | Properties/Features/Memory |
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S19</span> | 鍒涘缓閫昏緫璁惧 | `base/vulkanexamplebase.cpp:1088` | `createLogicalDevice(...)` |
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S20</span> | 鍙栧緱 graphics queue | `base/vulkanexamplebase.cpp:1096` | `vkGetDeviceQueue` |
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S21</span> | 閫夋繁搴︽牸寮?| `base/vulkanexamplebase.cpp:1104` | `getSupportedDepthFormat` |
+| <span style="background-color:#FFF8E1;padding:1px 6px;border-radius:4px;">S22</span> | 缁戝畾 swapchain 涓婁笅鏂?| `base/vulkanexamplebase.cpp:1108` | `swapChain.setContext(...)` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S23</span> | Base prepare 寮€濮?| `base/vulkanexamplebase.cpp:221` | 鍩虹被鍒濆鍖栨祦姘寸嚎 |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S24</span> | prepare 璋冪敤椤哄簭 | `base/vulkanexamplebase.cpp:228-236` | surface/pool/swapchain/sync/depth/rp/fb |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S25</span> | 鍒涘缓 surface | `base/vulkanexamplebase.cpp:3278` | 杞叆 `swapChain.initSurface` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S26</span> | initSurface 涓讳綋 | `base/VulkanSwapChain.cpp:15` | 骞冲彴 `vkCreate*Surface*` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S27</span> | 鍒涘缓 Win32 surface | `base/VulkanSwapChain.cpp:42` | `vkCreateWin32SurfaceKHR` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S28</span> | 鏌ヨ queue 瀹舵棌 | `base/VulkanSwapChain.cpp:113,116` | `vkGetPhysicalDeviceQueueFamilyProperties` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S29</span> | 鏌ヨ present 鏀寔 | `base/VulkanSwapChain.cpp:124` | `vkGetPhysicalDeviceSurfaceSupportKHR` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S30</span> | 閫?surface format | `base/VulkanSwapChain.cpp:166,169,186` | `colorFormat/colorSpace` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S31</span> | 鍒涘缓 swapchain | `base/vulkanexamplebase.cpp:3301` + `base/VulkanSwapChain.cpp:197` | create 鎬诲叆鍙?|
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S32</span> | surface capabilities | `base/VulkanSwapChain.cpp:208` | extent/image count 杈圭晫 |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S33</span> | present mode 閫夋嫨 | `base/VulkanSwapChain.cpp:226,230,234,242,244` | FIFO/MAILBOX/IMMEDIATE |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S34</span> | 鍒涘缓 VkSwapchainKHR | `base/VulkanSwapChain.cpp:312` | `vkCreateSwapchainKHR` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S35</span> | 鎷?swapchain images | `base/VulkanSwapChain.cpp:322,324` | `vkGetSwapchainImagesKHR` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S36</span> | 鍒涘缓 image views | `base/VulkanSwapChain.cpp:344` | 姣忓紶浜ゆ崲閾惧浘鍍忎竴涓?view |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S37</span> | 鍚屾鍘熻 | `base/vulkanexamplebase.cpp:2948` | fence + semaphores |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S38</span> | 鍛戒护姹?| `base/vulkanexamplebase.cpp:2968` | `vkCreateCommandPool` |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S39</span> | 娣卞害璧勬簮 | `base/vulkanexamplebase.cpp:2978` | depth image/memory/view |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S40</span> | 榛樿 renderpass | `base/vulkanexamplebase.cpp:3047` | color/depth attachment + dependency |
+| <span style="background-color:#FBE9E7;padding:1px 6px;border-radius:4px;">S41</span> | framebuffer | `base/vulkanexamplebase.cpp:3023` | 姣忎釜 swapchain image 瀵瑰簲涓€涓?framebuffer |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S42</span> | pbrtexture prepare 鎬绘祦绋?| `examples/pbrtexture/pbrtexture.cpp:1231-1240` | PBR 涓撳睘姝ラ椤哄簭 |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S43</span> | 鍔犺浇妯″瀷涓庤创鍥?| `examples/pbrtexture/pbrtexture.cpp:113` | loadAssets 鍏ュ彛 |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S44</span> | skybox/model 鍔犺浇 | `examples/pbrtexture/pbrtexture.cpp:116-117` | `cube.gltf` / `cerberus.gltf` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S45</span> | 鐜鍜屾潗璐ㄨ创鍥惧姞杞?| `examples/pbrtexture/pbrtexture.cpp:118-123` | environment/albedo/normal/ao/metallic/roughness |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S46</span> | 鎻忚堪绗﹀竷灞€缁戝畾澹版槑 | `examples/pbrtexture/pbrtexture.cpp:138-147` | binding 0~9 瀵瑰簲璧勬簮妲?|
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S47</span> | scene descriptor 鍐欏叆 | `examples/pbrtexture/pbrtexture.cpp:159-168` | UBO + IBL + 5 寮犳潗璐ㄥ浘 |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S48</span> | skybox descriptor 鍐欏叆 | `examples/pbrtexture/pbrtexture.cpp:175-177` | skybox 鐢?environment cube |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S49</span> | pipeline layout 鍒涘缓 | `examples/pbrtexture/pbrtexture.cpp:197-198` | `vkCreatePipelineLayout` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S50</span> | skybox / pbr shader 瑁呴厤 | `examples/pbrtexture/pbrtexture.cpp:215-222` | `loadShader(...)` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S51</span> | graphics pipeline 鍒涘缓 | `examples/pbrtexture/pbrtexture.cpp:217,226` | `vkCreateGraphicsPipelines` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S52</span> | BRDF LUT 鐢熸垚鍑芥暟 | `examples/pbrtexture/pbrtexture.cpp:230` | 绂诲睆鐢熸垚 2D LUT |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S53</span> | BRDF LUT 灏哄鏍煎紡 | `examples/pbrtexture/pbrtexture.cpp:234-235` | `R16G16_SFLOAT`, `dim=512` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S54</span> | BRDF LUT 鍥惧儚鐢ㄦ硶 | `examples/pbrtexture/pbrtexture.cpp:248` | COLOR_ATTACHMENT + SAMPLED |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S55</span> | BRDF LUT 缁樺埗鎻愪氦 | `examples/pbrtexture/pbrtexture.cpp:409,414` | begin renderpass + bind pipeline + draw |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S56</span> | Irradiance Cube 鐢熸垚鍑芥暟 | `examples/pbrtexture/pbrtexture.cpp:434` | 婕弽灏?IBL 棰勮绠?|
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S57</span> | Irradiance 甯搁噺 | `examples/pbrtexture/pbrtexture.cpp:438-440` | `R32G32B32A32`, `dim=64`, `numMips` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S58</span> | Irradiance 鍥惧儚鐢ㄦ硶 | `examples/pbrtexture/pbrtexture.cpp:454` | SAMPLED + TRANSFER_DST |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S59</span> | Irradiance 杞竷灞€/鎷疯礉 | `examples/pbrtexture/pbrtexture.cpp:715,743,769,779,788` | setImageLayout + vkCmdCopyImage |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S60</span> | Prefiltered Cube 鐢熸垚鍑芥暟 | `examples/pbrtexture/pbrtexture.cpp:814` | 闀滈潰 IBL 棰勮繃婊?|
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S61</span> | Prefiltered 甯搁噺 | `examples/pbrtexture/pbrtexture.cpp:818-820` | `R16G16B16A16`, `dim=512`, `numMips` |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S62</span> | Prefiltered roughness 鍒嗗眰 | `examples/pbrtexture/pbrtexture.cpp:1101-1102` | 姣忎釜 mip 瀵瑰簲涓€涓?roughness |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S63</span> | Prefiltered 杞竷灞€/鎷疯礉 | `examples/pbrtexture/pbrtexture.cpp:1094,1123,1149,1159,1168` | setImageLayout + vkCmdCopyImage |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S64</span> | Uniform Buffer 鍒涘缓 | `examples/pbrtexture/pbrtexture.cpp:1193` | scene/skybox/params 涓夊 UBO |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S65</span> | 姣忓抚鏇存柊鐭╅樀 | `examples/pbrtexture/pbrtexture.cpp:1211-1215` | scene 鐨?projection/view/model/camPos |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S66</span> | 姣忓抚鏇存柊 skybox 鐭╅樀 | `examples/pbrtexture/pbrtexture.cpp:1218-1219` | 鍘诲钩绉?view |
+| <span style="background-color:#EDE7F6;padding:1px 6px;border-radius:4px;">S67</span> | 姣忓抚鏇存柊鐏厜鍙傛暟 | `examples/pbrtexture/pbrtexture.cpp:1223-1228` | 鍥涗釜 lights + params |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S68</span> | 姣忓抚 render 鍏ュ彛 | `examples/pbrtexture/pbrtexture.cpp:1296` | prepareFrame -> update -> build -> submit |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S69</span> | prepareFrame | `base/vulkanexamplebase.cpp:700` | 绛?fence + acquire image |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S70</span> | wait fence | `base/vulkanexamplebase.cpp:704` | `vkWaitForFences` |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S71</span> | acquire next image | `base/vulkanexamplebase.cpp:709` + `base/VulkanSwapChain.cpp:348,352` | `vkAcquireNextImageKHR` |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S72</span> | 璁板綍涓绘覆鏌撳懡浠?| `examples/pbrtexture/pbrtexture.cpp:1244` | `buildCommandBuffer` |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S73</span> | begin renderpass | `examples/pbrtexture/pbrtexture.cpp:1266` | 涓?pass 寮€濮?|
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S74</span> | 缁樺埗 skybox | `examples/pbrtexture/pbrtexture.cpp:1279-1281` | bind skybox set + pipeline + draw |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S75</span> | 缁樺埗涓绘ā鍨?| `examples/pbrtexture/pbrtexture.cpp:1285-1287` | bind scene set + pbr pipeline + draw |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S76</span> | 鍙犲姞 UI | `examples/pbrtexture/pbrtexture.cpp:1289` | `drawUI` |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S77</span> | submitFrame | `base/vulkanexamplebase.cpp:723` | queue submit + present |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S78</span> | queue submit | `base/vulkanexamplebase.cpp:737` | `vkQueueSubmit` |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S79</span> | queue present | `base/vulkanexamplebase.cpp:748` | `vkQueuePresentKHR` |
+| <span style="background-color:#E0F7FA;padding:1px 6px;border-radius:4px;">S80</span> | 甯ц疆杞?| `base/vulkanexamplebase.cpp:760` | `currentBuffer` 閫掑 |
+| <span style="background-color:#FFF3E0;padding:1px 6px;border-radius:4px;">S81</span> | resize 鎬诲叆鍙?| `base/vulkanexamplebase.cpp:3191` | swapchain & 渚濊禆璧勬簮閲嶅缓 |
+| <span style="background-color:#FFF3E0;padding:1px 6px;border-radius:4px;">S82</span> | resize 绛夊緟绌洪棽 | `base/vulkanexamplebase.cpp:3200,3234` | `vkDeviceWaitIdle` |
+| <span style="background-color:#FFF3E0;padding:1px 6px;border-radius:4px;">S83</span> | resize 閲嶅缓璧勬簮 | `base/vulkanexamplebase.cpp:3205,3211,3215,3232` | swapchain/depth/fb/sync |
+| <span style="background-color:#FFF3E0;padding:1px 6px;border-radius:4px;">S84</span> | resize 鏇存柊鐩告満姣斾緥 | `base/vulkanexamplebase.cpp:3237` | `camera.updateAspectRatio` |
+| <span style="background-color:#F1F8E9;padding:1px 6px;border-radius:4px;">S85</span> | UI 鍙傛暟鍏ュ彛 | `examples/pbrtexture/pbrtexture.cpp:1306` | OnUpdateUIOverlay |
+| <span style="background-color:#F1F8E9;padding:1px 6px;border-radius:4px;">S86</span> | Exposure/Gamma UI | `examples/pbrtexture/pbrtexture.cpp:1309-1310` | 鍙鍖栬皟鍙?|
+| <span style="background-color:#FCE4EC;padding:1px 6px;border-radius:4px;">S87</span> | 鏍蜂緥鏋愭瀯 | `examples/pbrtexture/pbrtexture.cpp:82` | 閲婃斁鏍蜂緥鑷繁鐨勮祫婧?|
+| <span style="background-color:#FCE4EC;padding:1px 6px;border-radius:4px;">S88</span> | 鏍蜂緥鏋愭瀯缁嗚妭 | `examples/pbrtexture/pbrtexture.cpp:85-101` | pipeline/texture/UBO destroy |
+| <span style="background-color:#FCE4EC;padding:1px 6px;border-radius:4px;">S89</span> | 鍩虹被鏋愭瀯 | `base/vulkanexamplebase.cpp:921` | 閲婃斁閫氱敤 Vulkan 璧勬簮 |
+| <span style="background-color:#FCE4EC;padding:1px 6px;border-radius:4px;">S90</span> | 鍩虹被鏋愭瀯缁嗚妭 | `base/vulkanexamplebase.cpp:924-959` | swapchain/pool/cmd/rp/fb/depth/sync/instance |
+
+---
+
+## 3. 鎸夆€滄枃浠垛€濆弽鍚戠湅锛堜綘鍦?IDE 閲屾洿濂芥煡锛?
+## 3.1 `base/Entrypoints.h`
+
+- 鍚姩涓婚摼锛歚25 -> 33`
+- 涓嶅悓骞冲彴鐨勪富鍏ュ彛瀹忕粨鏋勭浉鍚岋細
+  - 鍒涘缓瀵硅薄
+  - `initVulkan`
+  - `setupWindow`
+  - `prepare`
+  - `renderLoop`
+  - `delete`
+
+## 3.2 `base/vulkanexamplebase.cpp`
+
+### A. 瀹炰緥涓庤澶囧垵濮嬪寲
+
+- `createInstance()`锛歚26`
+- `initVulkan()`锛歚997`
+- 鍏抽敭 API锛?  - `vkCreateInstance`锛歚175`
+  - `vkEnumeratePhysicalDevices`锛歚1029/1036`
+  - `createLogicalDevice`锛歚1088`
+  - `vkGetDeviceQueue`锛歚1096`
+
+#### `VkResult VulkanExampleBase::createInstance()` 閫愭瑙ｉ噴锛堝缓璁鐓ф簮鐮侀槄璇伙級
+
+瀵瑰簲婧愮爜涓诲尯闂达細`base/vulkanexamplebase.cpp:26-182`
+
+1. 鍒濆鍖栧疄渚嬫墿灞曞垪琛紙鍏堟斁閫氱敤 `VK_KHR_surface`锛夈€?   - `base/vulkanexamplebase.cpp:28`
+2. 鎸夊钩鍙拌拷鍔犵獥鍙ｇ郴缁?surface 鎵╁睍锛圵in32/Android/XCB/Wayland/Metal 绛夛級銆?   - `base/vulkanexamplebase.cpp:30-53`
+3. 鏌ヨ椹卞姩鏀寔鐨勫疄渚嬫墿灞曞苟缂撳瓨鍒?`supportedInstanceExtensions`銆?   - `base/vulkanexamplebase.cpp:55-68`
+4. 鍚堝苟鏍蜂緥璇锋眰鐨勫疄渚嬫墿灞曪紙`enabledInstanceExtensions`锛夛紝涓嶆敮鎸佸氨鎵撳嵃璀﹀憡銆?   - `base/vulkanexamplebase.cpp:78-90`
+5. 濡傛灉 shader 绫诲瀷鏄?`slang`锛屽己鍒跺皢 API 鑷冲皯鎻愬崌鍒?Vulkan 1.1锛屽苟杩藉姞鍚庣画璁惧鍒涘缓鎵€闇€鎵╁睍銆?   - `base/vulkanexamplebase.cpp:92-100`
+6. 缁勮 `VkApplicationInfo` 鍜?`VkInstanceCreateInfo`銆?   - `base/vulkanexamplebase.cpp:102-112`
+7. 濡傛灉寮€鍚?validation锛屾妸 debug messenger 鍒涘缓淇℃伅鎸傚埌 `instanceCreateInfo.pNext`锛岀‘淇濆疄渚嬪垱寤洪樁娈靛嵆鍙緭鍑鸿皟璇曚俊鎭€?   - `base/vulkanexamplebase.cpp:114-119`
+8. Apple/MoltenVK 鍦烘櫙涓嬶紝鏍规嵁鏀寔鎯呭喌杩藉姞 portability enumeration 鎵╁睍涓庢爣蹇椾綅銆?   - `base/vulkanexamplebase.cpp:121-128`
+9. 濡傛灉寮€鍚獙璇佹垨绯荤粺鏀寔 `VK_EXT_debug_utils`锛岃拷鍔犺鎵╁睍銆?   - `base/vulkanexamplebase.cpp:130-133`
+10. 鎶婃墿灞曞垪琛ㄥ啓鍏?`instanceCreateInfo`銆?    - `base/vulkanexamplebase.cpp:135-138`
+11. 鑻ュ紑鍚?validation锛屾鏌?`VK_LAYER_KHRONOS_validation` 鏄惁瀛樺湪锛屽瓨鍦ㄦ墠鍚敤 layer銆?    - `base/vulkanexamplebase.cpp:140-162`
+12. 鑻ユ湁 layer settings锛堝 MoltenVK 鐗瑰畾璁剧疆锛夛紝鍐嶆妸 `VkLayerSettingsCreateInfoEXT` 鎺ュ埌 `pNext` 閾句笂銆?    - `base/vulkanexamplebase.cpp:167-173`
+13. 璋冪敤 `vkCreateInstance`锛屽緱鍒?`VkResult`銆?    - `base/vulkanexamplebase.cpp:175`
+14. 濡傛灉鏀寔 debug utils锛屽垵濮嬪寲 debug utils 灏佽锛堝璞″懡鍚?鏍囪鐢級銆?    - `base/vulkanexamplebase.cpp:177-180`
+15. 杩斿洖 `VkResult` 缁欎笂灞?`initVulkan()`銆?    - `base/vulkanexamplebase.cpp:182`
+
+闃呰鎻愮ず锛氳繖涓嚱鏁板彧鍋氣€滃疄渚嬪眰鈥濆垵濮嬪寲锛屼笉鍒涘缓 `VkDevice`锛涢€昏緫璁惧鍒涘缓鍙戠敓鍦?`initVulkan()` 閲岃皟鐢?`createLogicalDevice()` 鏃讹紙`base/vulkanexamplebase.cpp:1088`锛夈€?
+### B. 鍩虹被 prepare锛堟覆鏌撴鏋舵惌寤猴級
+
+- `prepare()`锛歚221`
+- 椤哄簭璋冪敤锛堝繀鐪嬶級锛歚228-236`
+- 鍚勫瓙鍑芥暟浣嶇疆锛?  - `createSynchronizationPrimitives`锛歚2948`
+  - `createCommandPool`锛歚2968`
+  - `setupDepthStencil`锛歚2978`
+  - `setupFrameBuffer`锛歚3023`
+  - `setupRenderPass`锛歚3047`
+  - `createSurface`锛歚3278`
+  - `createSwapChain`锛歚3301`
+
+### C. 姣忓抚鎻愪氦閾捐矾
+
+- `renderLoop()`锛歚307`
+- `prepareFrame()`锛歚700`
+- `submitFrame()`锛歚723`
+- 鍏抽敭 API锛?  - `vkWaitForFences`锛歚704`
+  - `acquireNextImage`锛歚709`
+  - `vkQueueSubmit`锛歚737`
+  - `vkQueuePresentKHR`锛歚748`
+
+### D. resize 涓庨攢姣?
+- `windowResize()`锛歚3191`
+- `VulkanExampleBase::~VulkanExampleBase()`锛歚921`
+
+## 3.3 `base/VulkanSwapChain.cpp`
+
+### A. surface 鍒濆鍖?
+- `initSurface(...)`锛歚15`
+- 鍏抽敭鐐癸細
+  - 鍒涘缓骞冲彴 surface锛歐in32 鍦?`42`
+  - 鏌ヨ queue family锛歚113/116`
+  - present 鏀寔锛歚124`
+  - surface format锛歚166/169/186`
+
+### B. swapchain 鍒涘缓
+
+- `create(...)`锛歚197`
+- 鍏抽敭鐐癸細
+  - capabilities锛歚208`
+  - present modes锛歚226/230`
+  - mode 閫夋嫨锛歚234/242/244`
+  - `vkCreateSwapchainKHR`锛歚312`
+  - 鑾峰彇 images锛歚322/324`
+  - 鍒涘缓 image view锛歚344`
+
+### C. 鑾峰彇鍥惧儚涓庢竻鐞?
+- `acquireNextImage`锛歚348`锛堝唴閮?`vkAcquireNextImageKHR` 鍦?`352`锛?- `cleanup`锛歚354`锛堥攢姣?view/swapchain/surface锛?
+## 3.4 `base/VulkanDevice.cpp`
+
+- `getQueueFamilyIndex`锛歚127`
+- `createLogicalDevice`锛歚177`
+- `createBuffer`锛歚323/382`
+- `createCommandBuffer`锛歚490/504`
+- `flushCommandBuffer`锛歚520/549`
+
+浣犵湅棰勮绠楀嚱鏁帮紙BRDF LUT / IBL锛夋椂锛屼細棰戠箒鐪嬪埌 `createCommandBuffer + flushCommandBuffer`銆?
+## 3.5 `examples/pbrtexture/pbrtexture.cpp`
+
+### A. 鐢熷懡鍛ㄦ湡
+
+- 绫诲畾涔夛細`14`
+- 鏋愭瀯锛歚82`
+- `prepare`锛歚1231`
+- `render`锛歚1296`
+
+### B. 鍑嗗闃舵锛坧repare锛?
+- `loadAssets`锛歚113`
+- `generateBRDFLUT`锛歚230`
+- `generateIrradianceCube`锛歚434`
+- `generatePrefilteredCube`锛歚814`
+- `prepareUniformBuffers`锛歚1193`
+- `setupDescriptors`锛歚126`
+- `preparePipelines`锛歚183`
+
+### C. 甯ч樁娈碉紙render锛?
+- `updateUniformBuffers`锛歚1208`
+- `buildCommandBuffer`锛歚1244`
+
+### D. UI
+
+- `OnUpdateUIOverlay`锛歚1306`
+
+---
+
+## 4. 鈥滄弿杩扮缁戝畾鈥濆拰鈥淪hader 璧勬簮妲解€濈殑涓€涓€瀵瑰簲
+
+## 4.1 C++ 渚х粦瀹氬０鏄庯紙Descriptor Set Layout锛?
+`examples/pbrtexture/pbrtexture.cpp:138-147`
+
+- binding 0: scene UBO
+- binding 1: params UBO
+- binding 2: irradiance cube
+- binding 3: BRDF LUT
+- binding 4: prefiltered cube
+- binding 5: albedo
+- binding 6: normal
+- binding 7: ao
+- binding 8: metallic
+- binding 9: roughness
+
+## 4.2 C++ 渚у啓 descriptor
+
+`examples/pbrtexture/pbrtexture.cpp:159-168`
+
+杩欓噷鎶婃瘡涓?binding 鐨勨€滄Ы浣嶁€濊繛鍒板叿浣撹祫婧愶紙`textures.xxx.descriptor` / `uniformBuffers.xxx.descriptor`锛夈€?
+## 4.3 GLSL 渚у搴?
+`shaders/glsl/pbrtexture/pbrtexture.frag`
+
+- `binding=0`锛歚8`
+- `binding=1`锛歚15`
+- `binding=2..9`锛歚21-29`
+
+杩欏氨鏄綘瑕佸缓绔嬬殑鍏抽敭璁ょ煡锛?
+- C++ `binding N` 鍐欏叆浠€涔堣祫婧?- Shader `layout(binding=N)` 璇诲埌鐨勫氨鏄繖涓祫婧?
+---
+
+## 5. PBR 璁＄畻鍦?shader 閲岀殑鍏蜂綋浣嶇疆
+
+鏂囦欢锛歚shaders/glsl/pbrtexture/pbrtexture.frag`
+
+## 5.1 BRDF 鍩虹椤?
+- GGX 鍒嗗竷鍑芥暟 `D_GGX`锛歚50`
+- 鍑犱綍椤?`G_SchlicksmithGGX`锛歚59`
+- Fresnel锛堢矖绯欏害淇锛塦F_SchlickR`锛歚73`
+
+## 5.2 IBL 鐩稿叧
+
+- 棰勮繃婊ゅ弽灏勯噰鏍?`prefilteredReflection`锛歚78`
+- 鐩存帴鍏夎础鐚?`specularContribution`锛歚89`
+- 娉曠嚎璐村浘鍙樻崲 `calculateNormal`锛歚117`
+
+## 5.3 鏈€缁堣緭鍑?
+- 涓诲嚱鏁?`main`锛歚128`
+- Tone mapping锛歚166`
+- Gamma correction锛歚169`
+- 杈撳嚭棰滆壊 `outColor`锛歚172`
+
+---
+
+## 6. 姣忎竴甯ч噷 CPU/GPU 鍋氫簡浠€涔堬紙瀵瑰簲浠ｇ爜锛?
+```text
+CPU:
+  render()                                    [pbrtexture.cpp:1296]
+    -> prepareFrame()                         [vulkanexamplebase.cpp:700]
+         wait fence                           [704]
+         acquire image                        [709]
+    -> updateUniformBuffers()                 [pbrtexture.cpp:1208]
+    -> buildCommandBuffer()                   [1244]
+         begin renderpass                     [1266]
+         draw skybox                          [1279-1281]
+         draw object                          [1285-1287]
+         draw UI                              [1289]
+    -> submitFrame()                          [vulkanexamplebase.cpp:723]
+         vkQueueSubmit                        [737]
+         vkQueuePresentKHR                    [748]
+
+GPU:
+  鎵ц command buffer
+  鍐?color attachment
+  浜ゆ崲閾?present
+```
+
+---
+
+## 7. resize 涓庡紓甯歌矾寰勶紙涓€瀹氳鐪嬶級
+
+- resize 鎬诲叆鍙ｏ細`base/vulkanexamplebase.cpp:3191`
+- 鍏?`vkDeviceWaitIdle`锛歚3200`
+- 閲嶅缓锛歴wapchain/depth/fb/sync锛歚3205/3211/3215/3232`
+- 鏇存柊鐩告満姣斾緥锛歚3237`
+
+`prepareFrame/submitFrame` 涓ゅ閮藉鐞嗕簡 `OUT_OF_DATE/SUBOPTIMAL`锛?
+- `prepareFrame`锛歚700-714`
+- `submitFrame`锛歚723-751`
+
+---
+
+## 8. 杈撳叆涓庝氦浜掞紙浣犺皟璇曟椂甯哥敤锛?
+- 閿洏锛?  - Pause锛歚KEY_P` 鍦?`base/vulkanexamplebase.cpp:1281`
+  - UI 鏄剧ず鍒囨崲锛歚KEY_F1` 鍦?`1284`
+  - 鐩告満妯″紡锛歚KEY_F2` 鍦?`1287`
+  - 绉诲姩锛歚W/A/S/D` 鍦?`1303/1306/1309/1312`
+- 榧犳爣鐩告満锛歚handleMouseMove` 鍦?`3246`锛屾棆杞?骞崇Щ閫昏緫鍦?`3265/3268/3271`
+- pbrtexture UI 鍙傛暟锛歚examples/pbrtexture/pbrtexture.cpp:1309-1310`锛圗xposure/Gamma锛?
+---
+
+## 9. 閿€姣侀『搴忥紙鎺掓煡娉勬紡蹇呯湅锛?
+## 9.1 鏍蜂緥灞傛瀽鏋勶紙pbrtexture锛?
+- 鍏ュ彛锛歚examples/pbrtexture/pbrtexture.cpp:82`
+- 閲婃斁锛歱ipeline/layout/descriptor + 璐村浘 + UBO锛歚85-101`
+
+## 9.2 鍩虹被鏋愭瀯锛圴ulkanExampleBase锛?
+- 鍏ュ彛锛歚base/vulkanexamplebase.cpp:921`
+- 閫氱敤閲婃斁椤哄簭锛歚924-959`
+  - swapchain cleanup
+  - descriptorPool
+  - command buffers
+  - renderPass/framebuffers
+  - shader modules
+  - depth resources
+  - pipeline cache/command pool
+  - fences/semaphores
+  - UI resources
+  - vulkanDevice
+  - vkDestroyInstance
+
+---
+
+## 10. 鎺ㄨ崘鈥滈€愯瀛︿範璺緞鈥濓紙闈炲父鍏蜂綋锛?
+### 绗?1 杞紙鍙湅涓诲共锛屼笉鎶犵粏鑺傦級
+
+1. `base/Entrypoints.h:25-33`
+2. `base/vulkanexamplebase.cpp:997-1113`
+3. `base/vulkanexamplebase.cpp:221-236`
+4. `examples/pbrtexture/pbrtexture.cpp:1231-1240`
+5. `examples/pbrtexture/pbrtexture.cpp:1296-1303`
+
+### 绗?2 杞紙鐪嬭祫婧愬浣曟帴绾匡級
+
+1. `examples/pbrtexture/pbrtexture.cpp:138-147`
+2. `examples/pbrtexture/pbrtexture.cpp:159-168`
+3. `shaders/glsl/pbrtexture/pbrtexture.frag:21-29`
+
+### 绗?3 杞紙鐪?PBR 棰勮绠楋級
+
+1. `examples/pbrtexture/pbrtexture.cpp:230-421`锛圔RDF LUT锛?2. `examples/pbrtexture/pbrtexture.cpp:434-805`锛圛rradiance锛?3. `examples/pbrtexture/pbrtexture.cpp:814-1185`锛圥refiltered锛?
+### 绗?4 杞紙鐪嬫瘡甯ц皟搴︼級
+
+1. `base/vulkanexamplebase.cpp:700-760`
+2. `examples/pbrtexture/pbrtexture.cpp:1208-1303`
+
+---
+
+## 11. 浣犵幇鍦ㄥ氨鍙互鍋氱殑鈥滀唬鐮佸畾浣嶇粌涔犫€?
+1. 鎵惧埌 `vkCreateInstance`锛坄base/vulkanexamplebase.cpp:175`锛夈€?2. 鎵惧埌 `vkCreateDevice` 鎵€鍦ㄥ嚱鏁帮紙`base/VulkanDevice.cpp:177`锛夈€?3. 鎵惧埌 `vkCreateSwapchainKHR`锛坄base/VulkanSwapChain.cpp:312`锛夈€?4. 鎵惧埌 `vkQueueSubmit`锛坄base/vulkanexamplebase.cpp:737`锛夈€?5. 鎵惧埌 `outColor` 鏈€缁堣緭鍑猴紙`shaders/glsl/pbrtexture/pbrtexture.frag:172`锛夈€?
+濡傛灉浣犺繖 5 涓偣閮借兘鍦?IDE 涓噯纭烦鍒帮紝灏卞凡缁忔帉鎻′簡鈥滀粠鍒濆鍖栧埌鍑哄浘鈥濈殑瀹屾暣楠ㄦ灦銆?
