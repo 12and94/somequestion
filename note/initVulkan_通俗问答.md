@@ -1,4 +1,4 @@
-﻿# initVulkan() 通俗问答记录
+# initVulkan() 通俗问答记录
 
 ## 问题
 通俗易懂解释 `initVulkan()`
@@ -1220,3 +1220,1298 @@ shader 里 `binding = 0/1/2...` 只是插口定义，没有接真实资源。des
 - `binding 5~9` -> 各材质贴图
 
 一句话：descriptor 是“把 shader 的 binding 插口与真实 GPU 资源一一接线，并在 draw 时生效”的机制。
+
+---
+
+## 问题
+解释 `examples/pbrtexture/pbrtexture.cpp` 里的 `void setupDescriptors()`，根据其中写的注释分块解释
+
+## 回答
+这个函数的职责很集中：
+把当前示例要给 shader 用的 `buffer + texture` 组织成 Vulkan 的 descriptor，并分别为 `scene` 和 `skybox` 准备好可直接绑定的 descriptor set。
+
+可以把它理解成：
+“先定义插线板长什么样，再把每一根线插到正确插口里。”
+
+按函数里的注释分块看：
+
+1. `// Descriptor Pool`
+- 先创建 `descriptor pool`，也就是“给 descriptor set 分配空间的池子”。
+- 这里预留了两类资源：
+  - `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER`
+  - `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER`
+- 因为这个示例每帧都要有两套 set：
+  - 一套给 `scene`
+  - 一套给 `skybox`
+- 所以 pool 的容量按 `maxConcurrentFrames` 放大，保证多帧并发时每一帧都有自己那份 descriptor set。
+
+2. `// Descriptor set layout`
+- 这里定义 descriptor set 的“结构”。
+- 也就是规定 shader 的每个 `binding` 插口分别是什么类型：
+  - `binding 0`：矩阵/相机数据的 UBO
+  - `binding 1`：参数 UBO（灯光、曝光、gamma 等）
+  - `binding 2~9`：各种贴图和 IBL 纹理
+- 这一步还没有绑定真实资源，只是在声明：
+  “这个 set 未来必须长成这个样子。”
+
+3. `// Sets per frame, just like the buffers themselves`
+- 这一段说明它的组织策略：
+  - descriptor set 是“按帧分开”的
+  - 纹理资源是“跨帧共享”的
+- 原因是 UBO 每帧都会更新，如果多帧共用同一份，很容易出现 CPU 改数据时 GPU 还在读旧帧。
+- 所以这里给每个并发帧都准备一套自己的 descriptor set，对应自己的 uniform buffer。
+- 但贴图不需要每帧拷贝一份，因为它们通常是只读共享资源。
+
+4. `// Scene`
+- 这里给场景主物体分配并写入 `descriptorSets[i].scene`。
+- 它一次性绑定了 10 个资源：
+  - `binding 0` -> `scene` UBO
+  - `binding 1` -> `params` UBO
+  - `binding 2` -> `irradianceCube`
+  - `binding 3` -> `lutBrdf`
+  - `binding 4` -> `prefilteredCube`
+  - `binding 5` -> `albedoMap`
+  - `binding 6` -> `normalMap`
+  - `binding 7` -> `aoMap`
+  - `binding 8` -> `metallicMap`
+  - `binding 9` -> `roughnessMap`
+- 这就是一整套 PBR + IBL 计算所需的输入资源表。
+- `vkUpdateDescriptorSets(...)` 的作用就是把这些“资源和 binding 的对应关系”真正写进 descriptor set。
+
+5. `// Sky box`
+- 这里给天空盒分配并写入 `descriptorSets[i].skybox`。
+- 它只需要三类资源：
+  - `binding 0` -> `skybox` UBO
+  - `binding 1` -> `params` UBO
+  - `binding 2` -> `environmentCube`
+- 因为 skybox 只负责把环境贴图画成背景，不需要 PBR 物体用的那些金属度、粗糙度、法线、AO 等贴图。
+
+6. 运行时怎么用
+- 到真正绘制时：
+  - 画 skybox 前，绑定 `descriptorSets[currentBuffer].skybox`
+  - 画物体前，绑定 `descriptorSets[currentBuffer].scene`
+- 这样同一个 `pipelineLayout` 下，不同 draw call 可以快速切换不同的一整套资源。
+
+一句话总结：
+`setupDescriptors()` 做的是“把 shader 要用的所有资源，按 binding 规则装配成两套可直接绑定的资源表：一套给天空盒，一套给 PBR 物体”。
+
+---
+
+## 问题
+`descriptor`、`descriptor set`、`descriptorSetLayout`、`buffer` 分别是什么关系，如何运行，有什么作用
+
+## 回答
+这几个概念最容易混在一起，但它们其实正好是一条链上的不同层级：
+
+`buffer` -> `descriptor` -> `descriptor set` -> `descriptor set layout`
+
+可以按“数据从哪里来，shader 怎么拿到”来理解。
+
+1. `buffer` 是什么
+- `buffer` 是真实资源本体，里面装的是实际数据。
+- 例如：
+  - 顶点数据
+  - 索引数据
+  - uniform 数据
+  - storage 数据
+- 在 `pbrtexture` 里，`scene/skybox/params` 这些 UBO 本质上就是 buffer。
+- 所以 `buffer` 解决的是：
+  “数据放在哪儿”。
+
+2. `descriptor` 是什么
+- `descriptor` 不是数据本体，而是“资源描述项”。
+- 它告诉 Vulkan：
+  - 这个 binding 对应哪个 buffer / image
+  - 从哪个 offset 开始
+  - 多大
+  - 用什么 sampler
+  - 以什么 image layout 访问
+- 所以 `descriptor` 解决的是：
+  “shader 怎么找到这个资源”。
+
+3. `descriptor set` 是什么
+- `descriptor set` 是一组 descriptor 的集合。
+- 也就是把当前 draw call / 当前 pipeline 需要的资源打包成一整套。
+- 比如 `pbrtexture` 的 `scene` set 里，就同时放了：
+  - scene UBO
+  - params UBO
+  - irradiance cube
+  - BRDF LUT
+  - prefiltered cube
+  - albedo/normal/ao/metallic/roughness
+- 所以 `descriptor set` 解决的是：
+  “这一组资源如何整体绑定给 shader 用”。
+
+4. `descriptor set layout` 是什么
+- `descriptor set layout` 是 descriptor set 的结构定义。
+- 它规定：
+  - 有哪些 binding
+  - 每个 binding 的类型是什么
+  - 哪些 shader stage 能访问
+- 它相当于“参数表模板”。
+- 所以 `descriptor set layout` 解决的是：
+  “这一整套资源接口长什么样”。
+
+5. 它们之间的关系
+- `buffer/image`：真实资源
+- `descriptor`：指向真实资源的说明书
+- `descriptor set`：把多份说明书打包成一组
+- `descriptor set layout`：提前规定这一组说明书应该有哪些字段
+
+最像的类比是：
+- `descriptor set layout` = 结构体定义
+- `descriptor set` = 结构体实例
+- `descriptor` = 结构体字段值
+- `buffer/image` = 字段真正引用的资源对象
+
+6. 运行流程
+- 第一步：创建真实资源
+  - 比如 buffer、image、sampler
+- 第二步：创建 `descriptor set layout`
+  - 定义 binding 结构
+- 第三步：创建 `descriptor pool`
+  - 给 descriptor set 分配空间
+- 第四步：分配 `descriptor set`
+  - 按 layout 创建具体实例
+- 第五步：用 `vkUpdateDescriptorSets(...)` 把 buffer/image 写进去
+  - 这一步相当于“接线”
+- 第六步：绘制时调用 `vkCmdBindDescriptorSets(...)`
+  - 把这一整套资源绑定到 pipeline
+- 第七步：shader 按 `set = x, binding = y` 读取资源
+
+7. 它们各自的作用
+- `buffer`
+  - 真正存数据
+- `descriptor`
+  - 告诉 shader 去哪里取数据
+- `descriptor set`
+  - 把一组资源整体打包，绘制时整体切换
+- `descriptor set layout`
+  - 约束资源绑定接口，保证 shader 和 C++ 侧一致
+
+8. 一句话理解
+- `buffer` 是货物
+- `descriptor` 是货物标签
+- `descriptor set` 是整箱货单
+- `descriptor set layout` 是货单模板
+
+shader 不直接“认识”某个 buffer 句柄，它只认识：
+- 第几个 `set`
+- 第几个 `binding`
+
+Vulkan 再根据 descriptor set 里的内容，把这个 binding 映射到真实资源。
+
+一句话总结：
+Vulkan 这套设计的目的，就是把“shader 需要什么资源、这些资源怎么组织、绘制时怎么切换”变成一套显式、可批量管理的机制。
+
+---
+
+## 问题
+解释 `examples/pbrtexture/pbrtexture.cpp` 的 `void prepare()`
+
+```cpp
+void prepare()
+{
+    VulkanExampleBase::prepare();
+    loadAssets();
+    generateBRDFLUT();
+    generateIrradianceCube();
+    generatePrefilteredCube();
+    prepareUniformBuffers();
+    setupDescriptors();
+    preparePipelines();
+    prepared = true;
+}
+```
+
+解释这些步骤准备了哪些资源，元件与元件之间是怎么交互工作的
+
+## 回答
+`pbrtexture::prepare()` 的作用不是“开始渲染”，而是把这个示例渲染一帧所需的所有核心资源都准备齐。它把一个 PBR + IBL 场景拆成几类资源，按依赖顺序组装起来，最后让后续 `buildCommandBuffer()` 和每帧更新函数可以直接使用。
+
+函数位置在：
+`examples/pbrtexture/pbrtexture.cpp`
+
+```cpp
+void prepare()
+{
+    VulkanExampleBase::prepare();
+    loadAssets();
+    generateBRDFLUT();
+    generateIrradianceCube();
+    generatePrefilteredCube();
+    prepareUniformBuffers();
+    setupDescriptors();
+    preparePipelines();
+    prepared = true;
+}
+```
+
+### 先看整体图
+这几个步骤的依赖关系可以先压缩成一条链：
+
+1. `VulkanExampleBase::prepare()`
+   准备“窗口显示和主渲染通道”的底座
+
+2. `loadAssets()`
+   加载模型和原始贴图，准备输入资源
+
+3. `generateBRDFLUT()`
+   生成 PBR 查找表
+
+4. `generateIrradianceCube()`
+   由环境贴图生成漫反射 IBL 立方体贴图
+
+5. `generatePrefilteredCube()`
+   由环境贴图生成镜面反射 IBL 预过滤立方体贴图
+
+6. `prepareUniformBuffers()`
+   建立每帧要更新的参数缓冲
+
+7. `setupDescriptors()`
+   把上面这些 buffer 和 texture 接到 shader 的 binding 上
+
+8. `preparePipelines()`
+   用 descriptor layout + shader + render pass 创建 skybox 和 PBR 两条图形管线
+
+9. `prepared = true`
+   告诉主循环：“资源齐了，可以录制/提交真正的绘制命令了”
+
+下面按顺序解释每一步准备了什么，以及后面怎么被使用。
+
+### 1. `VulkanExampleBase::prepare()`
+这一步不是这个示例独有的，它准备的是“所有样例共享”的底层渲染基础设施：
+
+- `createSurface()`
+  创建窗口系统对应的显示 surface
+
+- `createCommandPool()`
+  创建主命令池
+
+- `createSwapChain()`
+  创建交换链，也就是最终显示到屏幕的一组图像
+
+- `createCommandBuffers()`
+  创建主渲染命令缓冲
+
+- `createSynchronizationPrimitives()`
+  创建每帧同步对象
+
+- `setupDepthStencil()`
+  创建默认深度模板资源
+
+- `setupRenderPass()`
+  创建主 render pass
+
+- `createPipelineCache()`
+  创建 pipeline cache
+
+- `setupFrameBuffer()`
+  为交换链图像创建 framebuffer
+
+如果把整个系统类比成一间工厂，这一步就是把厂房、电源、流水线、出货口都搭好。
+
+它给后面步骤提供的关键基础是：
+
+- `device`
+- `queue`
+- `renderPass`
+- `frameBuffers`
+- `drawCmdBuffers`
+- `pipelineCache`
+
+这些对象后面都会被 `generate...`、`preparePipelines()`、`buildCommandBuffer()` 直接使用。
+
+### 2. `loadAssets()`
+这一阶段加载“外部资产”，主要分两类：
+
+1. 模型
+- `models.skybox`：天空盒用的立方体模型
+- `models.object`：Cerberus 模型
+
+2. 原始纹理
+- `textures.environmentCube`
+- `textures.albedoMap`
+- `textures.normalMap`
+- `textures.aoMap`
+- `textures.metallicMap`
+- `textures.roughnessMap`
+
+它做的事本质上是：
+把磁盘上的 glTF 和 KTX 文件读进来，然后创建对应的 GPU 资源。
+
+这些资源后面分别这样用：
+
+- `models.skybox`
+  在天空盒 draw call 中绘制几何体
+
+- `models.object`
+  在 PBR draw call 中绘制实体模型
+
+- `textures.environmentCube`
+  直接给 skybox shader 采样
+  同时作为后面生成 `irradianceCube` 和 `prefilteredCube` 的输入
+
+- `albedo/normal/ao/metallic/roughness`
+  给 PBR 物体的 fragment shader 使用
+
+这一步是“把原材料运进工厂”。
+
+### 3. `generateBRDFLUT()`
+这一步创建的是：
+
+- 一张 2D 纹理：`textures.lutBrdf`
+
+它不是从文件加载，而是“运行时离屏渲染出来”的。
+
+这一步还会临时创建一套离屏渲染资源：
+
+- 一个 render pass
+- 一个 framebuffer
+- 一个临时 pipeline
+- 一个临时 descriptor set / layout
+- 一组命令缓冲操作
+
+最后把结果渲染到这张 2D 纹理里，然后供主 PBR shader 采样。
+
+它的作用是：
+给镜面 BRDF 提供一个查找表，把一部分昂贵积分预先烘焙掉，运行时就能直接查表。
+
+所以它在系统里的角色是：
+
+- 输入：数学模型 / shader 计算
+- 输出：`lutBrdf` 纹理
+- 消费者：PBR fragment shader
+
+如果少了它，PBR 镜面反射部分就没法按这套 IBL 流程完整工作。
+
+### 4. `generateIrradianceCube()`
+这一步生成的是：
+
+- `textures.irradianceCube`
+
+它的输入不是文件，而是：
+- 已经加载好的 `textures.environmentCube`
+
+它会先创建一个目标 cubemap 纹理，再建立临时离屏 framebuffer、render pass、descriptor、pipeline，用渲染方式把环境贴图卷积成 irradiance 结果。
+
+它的作用是：
+把环境贴图变成“漫反射环境光”的低频版本。
+
+PBR 中通常会把环境光分成两部分：
+
+- 漫反射 IBL
+  用 `irradianceCube`
+
+- 镜面反射 IBL
+  用 `prefilteredCube + BRDF LUT`
+
+所以这一步的系统角色是：
+
+- 输入：`environmentCube`
+- 输出：`irradianceCube`
+- 消费者：PBR fragment shader
+
+这就是“把原始环境贴图处理成适合漫反射采样的版本”。
+
+### 5. `generatePrefilteredCube()`
+这一步生成的是：
+
+- `textures.prefilteredCube`
+
+它也是从 `environmentCube` 派生出来，不过不是给漫反射用，而是给镜面反射用。不同粗糙度的材质会采样不同 mip 级别，从而近似不同粗糙度下的模糊反射。
+
+所以这一步的角色是：
+
+- 输入：`environmentCube`
+- 输出：`prefilteredCube`
+- 消费者：PBR fragment shader
+
+你可以这样理解这三张 IBL 相关纹理：
+
+- `environmentCube`
+  原始环境照片，主要给 skybox 直接显示
+
+- `irradianceCube`
+  环境漫反射版
+
+- `prefilteredCube`
+  环境镜面反射版
+
+再加上：
+- `lutBrdf`
+  镜面 BRDF 的查找表
+
+这四者合在一起，才是完整的 IBL 资源组。
+
+### 6. `prepareUniformBuffers()`
+这一阶段创建的是每帧要更新的 UBO：
+
+- `buffer.scene`
+- `buffer.skybox`
+- `buffer.params`
+
+而且是为每个并发帧都创建一份：
+
+- `std::array<UniformBuffers, maxConcurrentFrames> uniformBuffers`
+
+它们的含义分别是：
+
+- `scene`
+  主物体的矩阵、视图、相机位置
+
+- `skybox`
+  天空盒的矩阵数据
+
+- `params`
+  灯光、曝光、gamma 等共享参数
+
+这些 buffer 都是：
+
+- `VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT`
+- `HOST_VISIBLE`
+- `HOST_COHERENT`
+
+而且会 `map()`，方便 CPU 每帧直接 `memcpy` 更新。
+
+它们的实际更新发生在 `updateUniformBuffers()`：
+
+- `scene`：物体矩阵、相机矩阵、相机位置
+- `skybox`：只保留视图旋转的 skybox 矩阵
+- `params`：四个灯光位置、曝光、gamma
+
+所以这一阶段的作用是：
+创建“每帧可变数据”的承载体。
+
+如果前面的贴图是“静态资源”，这里的 uniform buffer 就是“动态状态”。
+
+### 7. `setupDescriptors()`
+这一阶段不再创建模型或纹理，而是把前面准备好的资源组织成 shader 可访问的绑定表。
+
+它主要创建：
+
+- `descriptorPool`
+- `descriptorSetLayout`
+- `descriptorSets[i].scene`
+- `descriptorSets[i].skybox`
+
+这里的核心是两套 descriptor set：
+
+1. `scene`
+   给 PBR 物体使用，绑定：
+   - scene UBO
+   - params UBO
+   - irradianceCube
+   - lutBrdf
+   - prefilteredCube
+   - albedo
+   - normal
+   - ao
+   - metallic
+   - roughness
+
+2. `skybox`
+   给天空盒使用，绑定：
+   - skybox UBO
+   - params UBO
+   - environmentCube
+
+所以它做的是“接线”。
+
+前几步准备的是资源本体：
+- buffer
+- image
+- sampler
+- view
+
+而 `setupDescriptors()` 把这些资源接到 shader 的 `binding` 上，让 shader 在运行时按 `binding` 能取到正确资源。
+
+这一步的依赖很明确：
+
+- 依赖 `prepareUniformBuffers()`
+  因为 descriptor 里要引用这些 UBO
+
+- 依赖 `loadAssets()`
+  因为 descriptor 里要引用材质贴图和环境贴图
+
+- 依赖 `generateBRDFLUT()`
+- 依赖 `generateIrradianceCube()`
+- 依赖 `generatePrefilteredCube()`
+  因为 descriptor 里要绑定这些运行时生成纹理
+
+所以它必须放在这些步骤之后。
+
+### 8. `preparePipelines()`
+这一步创建的是：
+
+- `pipelineLayout`
+- `pipelines.skybox`
+- `pipelines.pbr`
+
+其中最关键的是 `pipelineLayout` 使用了前面 `setupDescriptors()` 创建的 `descriptorSetLayout`。
+
+这意味着：
+
+- shader 资源接口
+- descriptor set 的结构
+- pipeline 期望的 binding 结构
+
+三者在这里被正式对齐。
+
+然后它创建两条 graphics pipeline：
+
+1. `pipelines.skybox`
+   使用 `skybox.vert.spv + skybox.frag.spv`
+   用来画背景环境盒
+
+2. `pipelines.pbr`
+   使用 `pbrtexture.vert.spv + pbrtexture.frag.spv`
+   用来画带 PBR 材质的 Cerberus 模型
+
+它们共用：
+- 同一个 `pipelineLayout`
+- 同一个主 `renderPass`
+
+但 shader 不同、部分 raster/depth 状态不同。
+
+这一步的作用是：
+把“资源绑定规则 + shader + 固定功能状态 + render pass”组合成 GPU 真正可执行的渲染管线对象。
+
+如果说 `setupDescriptors()` 是接线板，那么 `preparePipelines()` 是把电路图和机器装成可运行设备。
+
+### 9. `prepared = true`
+这只是一个状态位，但很重要。
+
+它告诉主循环：
+- 初始化资源已经齐备
+- 后面可以安全执行录制命令、更新 uniform、提交 draw
+
+没有这个标志，通常样例不会进入正常渲染路径。
+
+### 这些资源最后是怎么一起工作的
+真正的协作要看每帧绘制逻辑。绘制时绑定发生在：
+
+1. 每帧先更新当前帧的 UBO
+   - `updateUniformBuffers()`
+
+2. 开始主 render pass
+   - 渲染目标是交换链 framebuffer
+
+3. 如果显示 skybox
+   - 绑定 `descriptorSets[currentBuffer].skybox`
+   - 绑定 `pipelines.skybox`
+   - 绘制 `models.skybox`
+
+4. 绘制主物体
+   - 绑定 `descriptorSets[currentBuffer].scene`
+   - 绑定 `pipelines.pbr`
+   - 绘制 `models.object`
+
+也就是说，运行时资源交互是这样的：
+
+#### 天空盒路径
+- 几何体：`models.skybox`
+- pipeline：`pipelines.skybox`
+- descriptor set：`descriptorSets[currentBuffer].skybox`
+- shader 资源：
+  - `uniformBuffers[currentBuffer].skybox`
+  - `uniformBuffers[currentBuffer].params`
+  - `textures.environmentCube`
+
+作用：
+把环境贴图直接渲染成背景。
+
+#### PBR 物体路径
+- 几何体：`models.object`
+- pipeline：`pipelines.pbr`
+- descriptor set：`descriptorSets[currentBuffer].scene`
+- shader 资源：
+  - `uniformBuffers[currentBuffer].scene`
+  - `uniformBuffers[currentBuffer].params`
+  - `textures.irradianceCube`
+  - `textures.prefilteredCube`
+  - `textures.lutBrdf`
+  - `textures.albedoMap`
+  - `textures.normalMap`
+  - `textures.aoMap`
+  - `textures.metallicMap`
+  - `textures.roughnessMap`
+
+作用：
+根据物体材质贴图、相机参数、灯光参数和 IBL 预计算纹理，计算最终 PBR 光照结果。
+
+### 为什么这个顺序不能乱
+这个 `prepare()` 的顺序其实就是一条依赖链：
+
+1. 先 `VulkanExampleBase::prepare()`
+   因为后面所有 GPU 资源创建都依赖 `device / queue / renderPass / command buffers`
+
+2. 再 `loadAssets()`
+   因为 `environmentCube` 是后面两个 cube map 生成函数的输入
+
+3. 再生成：
+   - `BRDF LUT`
+   - `irradianceCube`
+   - `prefilteredCube`
+
+4. 再 `prepareUniformBuffers()`
+   因为 descriptor set 要引用这些 UBO
+
+5. 再 `setupDescriptors()`
+   因为 pipeline layout 要用 descriptor set layout
+
+6. 最后 `preparePipelines()`
+   因为此时 shader 要用的资源接口已经完整确定
+
+简单说：
+
+- 先有设备和主渲染底座
+- 再有模型和原始贴图
+- 再有派生出来的 IBL 贴图
+- 再有每帧参数 buffer
+- 再把资源接到 binding
+- 再创建真正的渲染管线
+
+这是非常标准的 Vulkan 初始化思路。
+
+### 一句话总结
+`prepare()` 干的事是：
+
+把 `pbrtexture` 这个示例所需的三大类资源组装起来：
+
+- 主渲染底座：swapchain / render pass / framebuffer / command buffers
+- 资源数据：模型、材质贴图、环境贴图、BRDF LUT、irradiance cube、prefiltered cube、uniform buffers
+- 绑定与执行：descriptor sets、pipeline layout、skybox pipeline、PBR pipeline
+
+最终在每帧绘制时形成两条协作链：
+
+- `skybox model + skybox pipeline + environmentCube`
+- `object model + pbr pipeline + material textures + IBL textures + per-frame UBO`
+
+---
+
+## 问题
+把上面 `prepare()` 相关内容整理成图
+
+## 回答
+下面把 `pbrtexture.cpp` 里的 `prepare()` 整理成一张“资源依赖图 + 运行图”。
+
+### 资源图
+
+```text
+prepare()
+  |
+  +-- VulkanExampleBase::prepare()
+  |     |
+  |     +-- Surface
+  |     +-- Swapchain
+  |     +-- Main RenderPass
+  |     +-- Framebuffers
+  |     +-- Draw CommandBuffers
+  |     +-- DepthStencil
+  |     +-- PipelineCache
+  |
+  +-- loadAssets()
+  |     |
+  |     +-- models.skybox
+  |     +-- models.object
+  |     +-- textures.environmentCube
+  |     +-- textures.albedoMap
+  |     +-- textures.normalMap
+  |     +-- textures.aoMap
+  |     +-- textures.metallicMap
+  |     +-- textures.roughnessMap
+  |
+  +-- generateBRDFLUT()
+  |     |
+  |     +-- textures.lutBrdf
+  |
+  +-- generateIrradianceCube()
+  |     |
+  |     +-- input: textures.environmentCube
+  |     +-- output: textures.irradianceCube
+  |
+  +-- generatePrefilteredCube()
+  |     |
+  |     +-- input: textures.environmentCube
+  |     +-- output: textures.prefilteredCube
+  |
+  +-- prepareUniformBuffers()
+  |     |
+  |     +-- uniformBuffers[i].scene
+  |     +-- uniformBuffers[i].skybox
+  |     +-- uniformBuffers[i].params
+  |
+  +-- setupDescriptors()
+  |     |
+  |     +-- descriptorSetLayout
+  |     +-- descriptorSets[i].scene
+  |     +-- descriptorSets[i].skybox
+  |
+  +-- preparePipelines()
+  |     |
+  |     +-- pipelineLayout
+  |     +-- pipelines.skybox
+  |     +-- pipelines.pbr
+  |
+  +-- prepared = true
+```
+
+### 运行图
+
+```text
+每帧 updateUniformBuffers()
+  |
+  +-- 更新 uniformBuffers[currentBuffer].scene
+  +-- 更新 uniformBuffers[currentBuffer].skybox
+  +-- 更新 uniformBuffers[currentBuffer].params
+
+开始主 RenderPass
+  |
+  +-- Skybox 路径
+  |     |
+  |     +-- 绑定 descriptorSets[currentBuffer].skybox
+  |     +-- 绑定 pipelines.skybox
+  |     +-- 绘制 models.skybox
+  |
+  +-- Object 路径
+        |
+        +-- 绑定 descriptorSets[currentBuffer].scene
+        +-- 绑定 pipelines.pbr
+        +-- 绘制 models.object
+
+输出到 swapchain framebuffer
+```
+
+### 把图翻成通俗话
+`prepare()` 实际上在搭三层东西：
+
+1. 底座层
+   - `VulkanExampleBase::prepare()`
+   - 负责把窗口显示、交换链、主 render pass、framebuffer、深度缓冲、命令缓冲这些公共渲染基础设施建好
+
+2. 数据层
+   - `loadAssets()` 负责加载模型和原始贴图
+   - `generateBRDFLUT()`、`generateIrradianceCube()`、`generatePrefilteredCube()` 负责生成 IBL 所需的派生纹理
+   - `prepareUniformBuffers()` 负责创建每帧动态参数缓冲
+
+3. 绑定与执行层
+   - `setupDescriptors()` 把 buffer 和 texture 接到 shader binding 上
+   - `preparePipelines()` 把 shader、descriptor layout、render pass、光栅状态组装成可执行 pipeline
+
+### 两个渲染子系统
+这个示例最后其实是两条并行但共享底座的渲染链。
+
+1. Skybox 链
+   - 几何体：`models.skybox`
+   - 资源：`environmentCube` + `skybox UBO` + `params UBO`
+   - 绑定：`descriptorSets[currentBuffer].skybox`
+   - 管线：`pipelines.skybox`
+
+2. PBR 物体链
+   - 几何体：`models.object`
+   - 资源：
+     - `scene UBO`
+     - `params UBO`
+     - `irradianceCube`
+     - `prefilteredCube`
+     - `lutBrdf`
+     - `albedo/normal/ao/metallic/roughness`
+   - 绑定：`descriptorSets[currentBuffer].scene`
+   - 管线：`pipelines.pbr`
+
+### 资源依赖顺序图
+这个顺序不能乱，原因如下：
+
+```text
+VulkanExampleBase::prepare
+    -> 提供 device / queue / renderPass / framebuffer / commandBuffer
+
+loadAssets
+    -> 提供 environmentCube / 模型 / 材质贴图
+
+generateBRDFLUT
+    -> 生成 lutBrdf
+
+generateIrradianceCube
+    -> 依赖 environmentCube
+    -> 生成 irradianceCube
+
+generatePrefilteredCube
+    -> 依赖 environmentCube
+    -> 生成 prefilteredCube
+
+prepareUniformBuffers
+    -> 生成 scene/skybox/params UBO
+
+setupDescriptors
+    -> 依赖所有 UBO 和纹理
+    -> 生成 descriptorSetLayout + descriptorSets
+
+preparePipelines
+    -> 依赖 descriptorSetLayout + renderPass
+    -> 生成 pipelineLayout + graphics pipelines
+```
+
+### 最关键的交互关系
+1. `environmentCube` 有双重作用
+   - 一方面直接给 skybox 显示
+   - 一方面作为输入，生成 `irradianceCube` 和 `prefilteredCube`
+
+2. `uniformBuffers` 是每帧动态更新的数据源
+   - 相机变了、灯光参数变了，就改这里
+   - descriptor set 不需要每帧重建，只要 descriptor 指向的 buffer 没变，更新 buffer 内容即可
+
+3. `descriptorSets` 是资源总接线板
+   - 它把“这次 draw 需要的所有资源”一次性交给 shader
+
+4. `pipeline` 是执行规则
+   - 它定义 shader、顶点格式、深度测试、剔除模式等
+   - 但 pipeline 不存实际纹理内容，实际资源由 descriptor set 提供
+
+### 一句话版图解
+
+```text
+模型/贴图/IBL纹理/UBO
+    -> descriptor set
+    -> pipeline
+    -> command buffer
+    -> render pass + framebuffer
+    -> swapchain 显示到屏幕
+```
+
+---
+
+## 问题
+解释 `void preparePipelines()`，按照注释分块
+
+## 回答
+`preparePipelines()` 的职责是：把前面已经准备好的资源接口、shader 和渲染状态组装成两条真正可执行的图形管线。
+
+它最后创建出两个核心对象：
+
+- `pipelines.skybox`
+- `pipelines.pbr`
+
+这两个 pipeline 后面在绘制时分别这样用：
+
+- 画天空盒时绑定 `pipelines.skybox`
+- 画主物体时绑定 `pipelines.pbr`
+
+下面按函数里的注释分块解释，同时把注释前那一段“通用状态准备”也补上，不然很难看懂后面为什么只改几行就能造出两条 pipeline。
+
+### 先说函数开头这段“无注释准备区”
+这一段先创建一批“管线状态对象”，它们像一份基础模板，后面 skybox 和 PBR pipeline 都在这份模板上做少量修改。
+
+包含的状态有：
+
+- `inputAssemblyState`
+  - 图元装配方式，这里是 `VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST`
+  - 意思是顶点按三角形列表来解释
+
+- `rasterizationState`
+  - 光栅化状态
+  - 初始设置为：
+    - 填充模式 `VK_POLYGON_MODE_FILL`
+    - 背面剔除 `VK_CULL_MODE_BACK_BIT`
+    - 正面定义 `VK_FRONT_FACE_COUNTER_CLOCKWISE`
+
+- `blendAttachmentState` / `colorBlendState`
+  - 颜色混合状态
+  - 这里关闭混合，相当于正常覆盖写颜色
+
+- `depthStencilState`
+  - 深度模板状态
+  - 初始是：
+    - 深度测试关闭
+    - 深度写入关闭
+    - 比较函数 `LESS_OR_EQUAL`
+
+- `viewportState`
+  - 视口和裁剪矩形数量
+  - 这里只声明会有 1 个 viewport 和 1 个 scissor
+
+- `multisampleState`
+  - 多重采样状态
+  - 这里是 `VK_SAMPLE_COUNT_1_BIT`，即不开 MSAA
+
+- `dynamicState`
+  - 动态状态
+  - 指定：
+    - `VK_DYNAMIC_STATE_VIEWPORT`
+    - `VK_DYNAMIC_STATE_SCISSOR`
+  - 也就是 viewport/scissor 不写死在 pipeline 里，而是在录制命令缓冲时设置
+
+- `shaderStages`
+  - 预留两个 shader stage 槽位
+  - 因为这个示例的两个 pipeline 都是：
+    - 一个 vertex shader
+    - 一个 fragment shader
+
+这一整段的作用可以概括为：
+先准备一份“图形管线公共模板”，减少后面创建两条 pipeline 时的重复代码。
+
+### `// Pipeline layout`
+这里创建的是 `pipelineLayout`。
+
+它的作用是：
+把“shader 将如何访问资源”这件事正式固定下来。
+
+这里最关键的是传入了：
+
+- `&descriptorSetLayout`
+- 数量 `1`
+
+这表示：
+这个 pipeline layout 包含 1 套 descriptor set layout，而这套 layout 正是前面 `setupDescriptors()` 创建出来的那一份。
+
+也就是说，在这里完成了这件事：
+
+- shader 需要哪些 binding
+- descriptor set 长什么样
+- pipeline 认什么资源接口
+
+三者被绑定到一起。
+
+你可以把 `pipelineLayout` 理解成：
+“管线对外暴露的资源接口协议”。
+
+没有它，后面即使 descriptor set 准备好了，pipeline 也不知道该怎么解释这些 binding。
+
+### `// Pipelines`
+这一段是在把“公共模板”真正装进 `VkGraphicsPipelineCreateInfo`。
+
+核心意思是：
+
+- 使用哪个 `pipelineLayout`
+- 使用哪个 `renderPass`
+- 顶点怎么解释
+- 图元怎么装配
+- 怎样剔除面
+- 是否做深度测试
+- 是否做颜色混合
+- shader 是哪两个阶段
+
+尤其要注意这两个点：
+
+1. `pipelineLayout`
+   - 来自上一块，决定资源接口
+
+2. `renderPass`
+   - 来自基类 `VulkanExampleBase::prepare()`
+   - 它决定这个 pipeline 是在哪种 framebuffer/attachment 语境下运行的
+
+还有一个关键点是顶点输入：
+
+- `Position`
+- `Normal`
+- `UV`
+- `Tangent`
+
+这说明这个 pipeline 期待 glTF 模型提供这些顶点属性。
+
+这块本质上是在说：
+“后面两条 pipeline 都以这份 `pipelineCI` 为基础，只改少数差异项。”
+
+### `// Skybox pipeline (background cube)`
+这块创建天空盒管线，重点是改了两件事：
+
+1. 剔除模式改成 `VK_CULL_MODE_FRONT_BIT`
+2. shader 换成 skybox 专用 shader
+
+为什么 skybox 用“剔除正面”而不是默认的“剔除背面”？
+
+因为天空盒通常是一个包围相机的立方体，而相机在立方体内部看向内侧。
+这时你真正想看到的是立方体的“内表面”，所以通常要把正面剔掉，保留内侧那一面。
+
+这就是：
+
+- 普通物体：看外壳，通常剔背面
+- 天空盒：人在盒子里面看内壁，通常剔正面
+
+这套 shader 的工作重点不是做完整 PBR，而是：
+采样 `environmentCube`，把环境贴图渲染成背景。
+
+这条 pipeline 创建完成后，后面在 draw 时会和：
+
+- `descriptorSets[currentBuffer].skybox`
+- `models.skybox`
+
+组合使用。
+
+### `// PBR pipeline`
+这块开始创建主物体的 PBR pipeline。
+
+它先把前面为了 skybox 改掉的剔除模式改回来：
+
+- `VK_CULL_MODE_BACK_BIT`
+
+这符合普通实体模型的常规渲染方式：
+保留正面，剔除背面。
+
+然后换成 PBR 用的 shader：
+
+- `pbrtexture.vert.spv`
+- `pbrtexture.frag.spv`
+
+这套 shader 才是真正消费以下资源的地方：
+
+- `scene` UBO
+- `params` UBO
+- `irradianceCube`
+- `prefilteredCube`
+- `lutBrdf`
+- `albedo / normal / ao / metallic / roughness`
+
+也就是说，前面 `prepare()` 里最重的那些资源准备，主要都是为了这一条 PBR pipeline 服务。
+
+### `// Enable depth test and write`
+这块非常关键。
+
+前面公共模板里，深度测试和深度写入默认是关的：
+
+- `depthWriteEnable = VK_FALSE`
+- `depthTestEnable = VK_FALSE`
+
+这样做是因为 skybox 通常不需要像普通实体那样参与深度遮挡逻辑，或者至少不希望它以普通前景物体的方式写深度。
+
+而到 PBR 物体这里，必须把深度打开：
+
+- 开启深度测试：
+  决定当前片元是不是被前面的片元挡住
+
+- 开启深度写入：
+  把当前物体的深度写入深度缓冲，供后续遮挡判断使用
+
+否则主模型会出现典型问题：
+
+- 前后遮挡错乱
+- 模型内部层次不对
+- 与 skybox/其他物体的空间关系错误
+
+所以这一块的本质是：
+让主物体进入“正常 3D 场景深度规则”。
+
+### 这个函数最终产出了什么
+`preparePipelines()` 结束后，最重要的结果是三个对象：
+
+1. `pipelineLayout`
+   - 定义资源接口
+
+2. `pipelines.skybox`
+   - 画天空盒
+
+3. `pipelines.pbr`
+   - 画 PBR 主物体
+
+这三个对象跟前面步骤的关系是：
+
+- 依赖 `descriptorSetLayout`
+  - 来自 `setupDescriptors()`
+
+- 依赖 `renderPass`
+  - 来自 `VulkanExampleBase::prepare()`
+
+- 依赖 shader 文件
+  - 来自 `shaders/.../pbrtexture`
+
+- 依赖模型顶点格式
+  - 来自 `vkglTF::Vertex`
+
+### 它和运行时的交互方式
+在真正录制绘制命令时，这两个 pipeline 分别被绑定：
+
+天空盒：
+- 绑定 `descriptorSets[currentBuffer].skybox`
+- 绑定 `pipelines.skybox`
+- 绘制 `models.skybox`
+
+主物体：
+- 绑定 `descriptorSets[currentBuffer].scene`
+- 绑定 `pipelines.pbr`
+- 绘制 `models.object`
+
+所以你可以把这两个 pipeline 看成两台已经装配好的机器：
+
+- skybox 机器：
+  - 输入 skybox 资源表和 cube 模型，输出背景环境
+
+- PBR 机器：
+  - 输入 PBR 资源表和 Cerberus 模型，输出带材质和 IBL 光照的最终物体
+
+### 一句话总结
+按注释分块看，这个函数做的是：
+
+1. `// Pipeline layout`
+   - 先把 descriptor 资源接口固定成 pipeline 可识别的布局
+
+2. `// Pipelines`
+   - 再搭一份公共图形管线模板
+
+3. `// Skybox pipeline (background cube)`
+   - 基于模板创建天空盒专用 pipeline
+
+4. `// PBR pipeline`
+   - 切换成主物体 shader 和剔除方式
+
+5. `// Enable depth test and write`
+   - 为主物体开启正常 3D 深度规则，并最终创建 PBR pipeline
+
+---
+
+## 问题
+是 `renderpass` 绑定 `pipeline`，还是 `pipeline` 绑定 `renderpass`
+
+## 回答
+更准确地说：
+
+是 `pipeline` 绑定到 `render pass`，不是 `render pass` 绑定 `pipeline`。
+
+在 Vulkan 里，创建 graphics pipeline 时，你要把它声明为“适用于哪个 render pass / subpass”。
+
+在这个示例里就是这句：
+
+```cpp
+VkGraphicsPipelineCreateInfo pipelineCI =
+    vks::initializers::pipelineCreateInfo(pipelineLayout, renderPass);
+```
+
+这里把 `renderPass` 填进了 `pipelineCI`，然后再：
+
+```cpp
+vkCreateGraphicsPipelines(...)
+```
+
+所以方向是：
+
+- `pipeline` 在创建时依赖 `renderPass`
+- 不是 `renderPass` 去记录或拥有某个 `pipeline`
+
+### 为什么这样设计
+因为 `render pass` 定义的是“渲染环境”：
+
+- 有哪些 attachment
+- color/depth attachment 格式是什么
+- 有几个 subpass
+- attachment 如何读写/切换布局
+
+而 `pipeline` 定义的是“在这个渲染环境里怎么画”：
+
+- shader
+- 顶点输入
+- 光栅化
+- 深度测试
+- 混合
+- 资源布局
+
+所以 pipeline 必须知道它要运行在什么 render pass 里，才能保证兼容。
+
+你可以这么记：
+
+- `render pass` = 舞台
+- `pipeline` = 演员的表演规则
+- 演员要先知道自己上的是哪个舞台
+- 不是舞台去绑定某个演员
+
+### 运行时是什么关系
+运行时你会先：
+
+1. `vkCmdBeginRenderPass(...)`
+   - 进入某个 render pass 实例
+
+2. `vkCmdBindPipeline(...)`
+   - 绑定一个和这个 render pass 兼容的 pipeline
+
+所以执行顺序看起来像是：
+“先开 render pass，再 bind pipeline”
+
+但对象依赖关系仍然是：
+“pipeline 在创建时绑定了 render pass 兼容性”。
+
+这两个层面不要混：
+
+1. 创建期关系
+   - pipeline 依赖 render pass
+
+2. 命令录制期顺序
+   - 先 begin render pass
+   - 再 bind pipeline
+
+### 一句话结论
+- 从对象设计上说：`pipeline` 绑定 `render pass`
+- 从命令执行上说：先进入 `render pass`，再绑定 `pipeline`
+```mermaid
+flowchart TD
+    A["prepare()"] --> B["VulkanExampleBase::prepare()"]
+    A --> C["loadAssets()"]
+    A --> D["generateBRDFLUT()"]
+    A --> E["generateIrradianceCube()"]
+    A --> F["generatePrefilteredCube()"]
+    A --> G["prepareUniformBuffers()"]
+    A --> H["setupDescriptors()"]
+    A --> I["preparePipelines()"]
+    A --> J["prepared = true"]
+
+    B --> B1["Surface"]
+    B --> B2["Swapchain"]
+    B --> B3["Main RenderPass"]
+    B --> B4["Framebuffers"]
+    B --> B5["Draw CommandBuffers"]
+    B --> B6["DepthStencil"]
+    B --> B7["PipelineCache"]
+
+    C --> C1["models.skybox"]
+    C --> C2["models.object"]
+    C --> C3["textures.environmentCube"]
+    C --> C4["textures.albedoMap"]
+    C --> C5["textures.normalMap"]
+    C --> C6["textures.aoMap"]
+    C --> C7["textures.metallicMap"]
+    C --> C8["textures.roughnessMap"]
+
+    C3 --> E
+    C3 --> F
+
+    D --> D1["textures.lutBrdf"]
+    E --> E1["textures.irradianceCube"]
+    F --> F1["textures.prefilteredCube"]
+
+    G --> G1["uniformBuffers[i].scene"]
+    G --> G2["uniformBuffers[i].skybox"]
+    G --> G3["uniformBuffers[i].params"]
+
+    G1 --> H
+    G2 --> H
+    G3 --> H
+    D1 --> H
+    E1 --> H
+    F1 --> H
+    C3 --> H
+    C4 --> H
+    C5 --> H
+    C6 --> H
+    C7 --> H
+    C8 --> H
+
+    H --> H1["descriptorSetLayout"]
+    H --> H2["descriptorSets[i].scene"]
+    H --> H3["descriptorSets[i].skybox"]
+
+    H1 --> I
+    B3 --> I
+    B7 --> I
+    I --> I1["pipelineLayout"]
+    I --> I2["pipelines.skybox"]
+    I --> I3["pipelines.pbr"]
+
+    I1 --> K["buildCommandBuffer() / render"]
+    I2 --> K
+    I3 --> K
+    H2 --> K
+    H3 --> K
+    C1 --> K
+    C2 --> K
+    B4 --> K
+    B5 --> K
+
+```
