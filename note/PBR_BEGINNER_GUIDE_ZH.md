@@ -1,4 +1,4 @@
-﻿# Vulkan 到 PBR 渲染完整流程拆解（代码定位增强版）
+# Vulkan 到 PBR 渲染完整流程拆解（代码定位增强版）
 
 > 目标：让你从 `Instance` 到 `PBR 出图` 再到 `销毁`，每一步都能在源码里**精确找到对应代码**。  
 > 主线样例：`examples/pbrtexture/pbrtexture.cpp`
