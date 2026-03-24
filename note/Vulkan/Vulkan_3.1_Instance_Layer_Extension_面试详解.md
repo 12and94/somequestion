@@ -1,4 +1,4 @@
-﻿# Vulkan 3.1：Instance / Layer / Extension 面试详解
+# Vulkan 3.1：Instance / Layer / Extension 面试详解
 
 适用目标：
 1. 彻底理解 Vulkan 初始化最前面的三件套：`Instance`、`Layer`、`Extension`。
